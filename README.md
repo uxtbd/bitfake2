@@ -1,7 +1,7 @@
 # Bitfake
 Bitfake was originally created to detect fake `.FLAC` files through spectral analysis. It has since grown into a multipurpose CLI tool for handling music more easily and efficiently.
 
-One common problem was that getting a track’s metadata required long `ffprobe` commands with messy output. Converting music with `ffmpeg` was also repetitive. The command itself is easy to remember, but writing scripts to convert entire directories felt inefficient and slow. This project wraps those complex `ffmpeg`/`ffprobe` workflows into a simple, intuitive CLI.
+One common problem was that getting a track’s metadata required long `ffprobe` commands with messy output. Converting music with `ffmpeg` was also repetitive. The command itself is easy to remember, but writing scripts to convert entire directories felt inefficient and slow. This project now performs metadata and conversion tasks directly through linked libraries (TagLib/libsndfile/libav*), keeping the CLI simple while avoiding external `ffmpeg`/`ffprobe` shell calls.
 
 This project is still far from complete, but it is already effective.
 
@@ -10,9 +10,9 @@ This project is still far from complete, but it is already effective.
 * Get ReplayGain info (useful for music players)
 * Spectral analysis on 44.1 kHz `.FLAC` files (higher sample rates may be misrepresented, so be careful)
 * Lossy diagnosis (banding score)
-* File Conversion (Works going TO .mp3 or .ogg)
+* File Conversion (Works for outputs like `.wav`, `.flac`, `.ogg`, `.mp3`, `.aac`, `.opus`)
 * Tagging metadata (Works for single files, but not directories yet)
-* Calculating Replaygain and applying it to files (Works for track replay gain iterating through directrories, album replay gain is a bit funky?)
+* Calculating ReplayGain and applying it to files (Works for track replay gain iterating through directories, album replay gain is a bit funky?)
 * Version info (WOW! BEST YET!)
 
 ## Implemented Development Features
@@ -36,26 +36,27 @@ Build-time dependencies:
 * FFTW3 development headers and library
 * libebur128 development headers and library
 * libsndfile development headers and library
+* FFmpeg development libraries (`libavformat`, `libavcodec`, `libavutil`, `libswresample`)
 
 Run-time dependencies:
-* `ffmpeg` and `ffprobe` available in your `PATH` (To be removed. See future plans)
+* No external `ffmpeg`/`ffprobe` CLI tools are required in `PATH`
 
 ## Installation
 1. Install all dependencies
 
 Ubuntu/Debian-based distributions:
 ```sh
-sudo apt update && sudo apt install -y build-essential libtag1-dev libfftw3-dev libebur128-dev libsndfile1-dev ffmpeg
+sudo apt update && sudo apt install -y build-essential libtag1-dev libfftw3-dev libebur128-dev libsndfile1-dev libavformat-dev libavcodec-dev libavutil-dev libswresample-dev
 ```
 
 Fedora/Fedora-based distributions:
 ```sh
-sudo dnf install -y https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm && sudo dnf install -y gcc-c++ make taglib-devel fftw-devel ebur128-devel libsndfile-devel ffmpeg
+sudo dnf install -y gcc-c++ make taglib-devel fftw-devel ebur128-devel libsndfile-devel ffmpeg-devel
 ```
 
 RHEL:
 ```sh
-sudo dnf install -y epel-release dnf-plugins-core && sudo dnf install -y https://download1.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm && sudo dnf config-manager --set-enabled crb && sudo dnf install -y gcc-c++ make taglib-devel fftw-devel ebur128-devel libsndfile-devel ffmpeg
+sudo dnf install -y epel-release dnf-plugins-core && sudo dnf install -y https://download1.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm && sudo dnf config-manager --set-enabled crb && sudo dnf install -y gcc-c++ make taglib-devel fftw-devel ebur128-devel libsndfile-devel ffmpeg-devel
 ```
 
 Arch/Arch-based distributions:
@@ -68,14 +69,19 @@ Gentoo:
 sudo emerge --ask sys-devel/gcc sys-devel/make media-libs/taglib sci-libs/fftw media-libs/libebur128 media-libs/libsndfile media-video/ffmpeg
 ```
 
+Gentoo USE flag note (for encoder support):
+```sh
+echo "media-video/ffmpeg encode mp3 opus vorbis" | sudo tee -a /etc/portage/package.use/bitfake
+```
+
 Alpine:
 ```sh
-sudo apk add --no-cache build-base taglib-dev fftw-dev ebur128-dev libsndfile-dev ffmpeg
+sudo apk add --no-cache build-base taglib-dev fftw-dev ebur128-dev libsndfile-dev ffmpeg-dev
 ```
 
 Overall dependency list (for other distros):
 ```
-build-base taglib-dev fftw-dev ebur128-dev libsndfile-dev ffmpeg
+build-base taglib-dev fftw-dev ebur128-dev libsndfile-dev libavformat libavcodec libavutil libswresample
 ```
 
 2. Clone the project and compile
@@ -141,14 +147,14 @@ sudo cp ./bitf /usr/bin/
 
 ## Troubleshooting
 
-`ffmpeg`/`ffprobe` not found:
-* Install `ffmpeg` and make sure `ffmpeg` and `ffprobe` are available in your `PATH`.
+Linker errors like `cannot find -lavformat`, `cannot find -lavcodec`, `cannot find -lavutil`, or `cannot find -lswresample`:
+* Install FFmpeg development packages for your distro (`ffmpeg-devel`, `ffmpeg-dev`, or `libav* -dev` packages).
 
 Linker errors like `cannot find -ltag`, `cannot find -lfftw3`, `cannot find -lebur128`, or `cannot find -lsndfile`:
 * Install the TagLib/FFTW3/libebur128/libsndfile *development* packages for your distro (not just the runtime libs).
 
 Build fails due to missing headers:
-* Confirm you installed TagLib, FFTW3, libebur128, and libsndfile dev packages and are using a C++17 compiler.
+* Confirm you installed TagLib, FFTW3, libebur128, libsndfile, and FFmpeg/libav development packages and are using a C++17 compiler.
 
 # Contact me
 
@@ -158,7 +164,7 @@ Build fails due to missing headers:
 
 # Contributor(s)
 
-Well no contributors yet... however, as per usual with FOSS projects, this project was made with programmers with just free time or hobbyists. I am just a highschool-college student hybrid thingy mabob, so any sort of contribution really helps :D. Use the contact info above if you're interested in becoming a maintainer, or just leave a pull request and ill take a look at it, may you have a good morning/evening/night!
+Well no contributors yet... however, as per usual with FOSS projects, this project was made by programmers with free time and hobbyists. I am just a highschool-college student hybrid thingy mabob, so any sort of contribution really helps :D. Use the contact info above if you're interested in becoming a maintainer, or just leave a pull request and I'll take a look at it. May you have a good morning/evening/night!
 
 <a href="https://github.com/ray17x/bitfake2/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=ray17x/bitfake2" />
