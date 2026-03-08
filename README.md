@@ -13,6 +13,8 @@ This project is still far from complete, but it is already effective.
 * File Conversion (Works for outputs like `.wav`, `.flac`, `.ogg`, `.mp3`, `.aac`, `.opus`)
 * Tagging metadata (Works for single files, but not directories yet)
 * Calculating ReplayGain and applying it to files (Works for track replay gain iterating through directories, album replay gain is a bit funky?)
+* Directory Conversion (works for all previously mentioned formats!)
+* CoverArt+ (Brings along cover art among all conversions!)
 * Version info (WOW! BEST YET!)
 
 ## Implemented Development Features
@@ -24,9 +26,9 @@ These features are meant to make contributing to the project easier:
 * File checking functions for specific use cases (audio extension checks, magic number checks, and specific format checks)
 
 ## Yet to Be Implemented
-* Directory conversion
 * Directory tagging
 * MusicBrainz functionality
+* Bandcamp functionality/features
 
 ## Dependencies
 
