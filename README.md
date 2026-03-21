@@ -3,13 +3,15 @@ Bitfake was originally created to detect fake `.FLAC` files through spectral ana
 
 One common problem was that getting a track’s metadata required long `ffprobe` commands with messy output. Converting music with `ffmpeg` was also repetitive. The command itself is easy to remember, but writing scripts to convert entire directories felt inefficient and slow. This project now performs metadata and conversion tasks directly through linked libraries (TagLib/libsndfile/libav*).
 <p align="center">
-  <img src="bitfakethelogotrust.png" width="500">
+  <img src="bitfakethelogotrust.png" width="400">
 </p>
 
-# Latest Version (1.6)
+# Latest Version (1.7)
 
-1.6 is a minor yet very very helpful update that improves accuracy and speed of the spectural analysis features. Also gets rids of warnings with a ignore warning flag but we don't talk about that.
-
+1.7 another minor update. Adds some text to the spectrogram.
+<p align="center">
+  <img src="samplesg.png" width="500">
+</p>
 ## Implemented Features
 * Get metadata
 * Get ReplayGain info (useful for music players)
