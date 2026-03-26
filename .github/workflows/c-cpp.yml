@@ -32,7 +32,7 @@ jobs:
 
       - name: Build bitfake2
         run: |
-          make 
+          make install
 
       - name: Verify Binary
         run: |
@@ -44,5 +44,5 @@ jobs:
 
       - name: Smoke Test (Run on sample)
         run: |
-          ./bitf -v
-          ./bitf -h
+          bitf -v
+          bitf -h
