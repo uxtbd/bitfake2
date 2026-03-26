@@ -4,5 +4,5 @@ let
 in
 pkgs.mkShell {
   inputsFrom = [ (pkgs.callPackage ./package.nix { }) ];
-  packages = [ pkgs.clang-tools ];
+  packages = [ pkgs.clang-tools pkgs.npins ];
 }
