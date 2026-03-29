@@ -7,12 +7,9 @@ One common problem was that getting a track’s metadata required long `ffprobe`
   <img src="bitfakethelogotrust.png" width="400">
 </p>
 
-# Latest Version (1.7)
+# Latest Version (1.8)
 
-1.7 another minor update. Adds some text to the spectrogram.
-<p align="center">
-  <img src="samplesg.png" width="500">
-</p>
+1.8 brings a lot of compatibility between other distros and operating systems, thanks to @eatingzushigonewild, there is now support on \*BSD and installing on/with the Nix package manager is now easier. The release will not have it so you will have to run `git clone` to clone the project before building; regardless, shout out to them for making it easier to use this program on a multitude of operating systems.
 
 ## Implemented Features
 * Get metadata
@@ -38,7 +35,11 @@ These features are meant to make contributing to the project easier:
 * File checking functions for specific use cases (audio extension checks, magic number checks, and specific format checks)
 
 ## Yet to Be Implemented
-* Maybe musicbrainz on 1.7 or 1.8 relative.
+* GPU Accelerated actions (converting, analyzing, etc.) (Likely 2.0)
+* MusicBrainz syncing via ID or song title/artist/album. (Likely 2.0 as well)
+* Remaking `main.cpp` so the CLI is much easier to use
+* Many Fixes to converting songs
+* More to be added later
 
 ## Dependencies
 
