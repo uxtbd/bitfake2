@@ -31,6 +31,7 @@ namespace gb = globals;
 #include <sstream>
 #include <fftw3.h>
 #include <complex>
+#include <exception>
 // #include <musicbrainz5/Query.h>
 // #include <musicbrainz5/Metadata.h>
 // #include <musicbrainz5/Artist.h>
@@ -1477,6 +1478,270 @@ static std::string sanitize_dir_name(const std::string &name) {
     return safe;
 }
 
+static std::string trim_copy(const std::string &value) {
+    std::size_t start = 0;
+    while (start < value.size() && std::isspace(static_cast<unsigned char>(value[start]))) {
+        ++start;
+    }
+
+    std::size_t end = value.size();
+    while (end > start && std::isspace(static_cast<unsigned char>(value[end - 1]))) {
+        --end;
+    }
+
+    return value.substr(start, end - start);
+}
+
+static void increment_value_count(std::unordered_map<std::string, std::size_t> &counts, const std::string &value) {
+    const std::string trimmed = trim_copy(value);
+    if (!trimmed.empty()) {
+        counts[trimmed]++;
+    }
+}
+
+// so we can decide on the most common tag value
+// if like, some songs have different tags (for some reason)
+static std::string most_common_value(const std::unordered_map<std::string, std::size_t> &counts) {
+    std::string bestValue;
+    std::size_t bestCount = 0;
+
+    for (const auto &entry : counts) {
+        if (entry.second > bestCount ||
+            (entry.second == bestCount && !entry.first.empty() && (bestValue.empty() || entry.first < bestValue))) {
+            bestValue = entry.first;
+            bestCount = entry.second;
+        }
+    }
+
+    return bestValue;
+}
+
+static std::string first_property_value(const TagLib::PropertyMap &properties, const char *key) {
+    auto it = properties.find(key);
+    if (it == properties.end() || it->second.isEmpty()) {
+        return "";
+    }
+    return trim_copy(it->second[0].to8Bit(true));
+}
+
+static std::string extract_year_value(const std::string &text) {
+    if (text.size() < 4) {
+        return "";
+    }
+
+    // sometimes year tags can be in the form of a full date
+    for (std::size_t i = 0; i + 3 < text.size(); ++i) {
+        const unsigned char c0 = static_cast<unsigned char>(text[i]);
+        const unsigned char c1 = static_cast<unsigned char>(text[i + 1]);
+        const unsigned char c2 = static_cast<unsigned char>(text[i + 2]);
+        const unsigned char c3 = static_cast<unsigned char>(text[i + 3]);
+
+        if (!std::isdigit(c0) || !std::isdigit(c1) || !std::isdigit(c2) || !std::isdigit(c3)) {
+            continue;
+        }
+
+        const int year = (text[i] - '0') * 1000 + (text[i + 1] - '0') * 100 + (text[i + 2] - '0') * 10 +
+                         (text[i + 3] - '0');
+        if (year >= 1000 && year <= 2999) {
+            return text.substr(i, 4);
+        }
+    }
+
+    return "";
+}
+
+void RenameAlbumDirectoriesFromTags(const fs::path &rootDir) {
+    if (!fs::exists(rootDir) || !fs::is_directory(rootDir)) {
+        err("Input path does not exist or is not a directory.");
+        return;
+    }
+
+    std::vector<fs::path> albumDirs;
+    // rename only direct subdirs 
+    for (const auto &entry : fs::directory_iterator(rootDir)) {
+        if (entry.is_directory()) {
+            albumDirs.push_back(entry.path());
+        }
+    }
+
+    if (albumDirs.empty()) {
+        warn("No album directories found to rename.");
+        return;
+    }
+
+    int renamedCount = 0;
+    int unchangedCount = 0;
+    int skippedCount = 0;
+    int failedCount = 0;
+
+    for (const fs::path &albumDir : albumDirs) {
+        std::unordered_map<std::string, std::size_t> albumCounts;
+        std::unordered_map<std::string, std::size_t> artistCounts;
+        std::unordered_map<std::string, std::size_t> albumArtistCounts;
+        std::unordered_map<std::string, std::size_t> yearCounts;
+        std::size_t audioFileCount = 0;
+
+        try {
+            for (const auto &entry : fs::recursive_directory_iterator(albumDir)) {
+                // recursive scan
+                if (!entry.is_regular_file()) {
+                    continue;
+                }
+                if (!fc::IsValidAudioFile(entry.path())) {
+                    continue;
+                }
+
+                ++audioFileCount;
+
+                TagLib::FileRef fileRef(entry.path().string().c_str());
+                if (fileRef.isNull() || !fileRef.tag() || !fileRef.file()) {
+                    continue;
+                }
+
+                TagLib::Tag *tag = fileRef.tag();
+                TagLib::PropertyMap properties = fileRef.file()->properties();
+
+                std::string album;
+                if (!tag->album().isEmpty()) {
+                    album = tag->album().to8Bit(true);
+                }
+                if (album.empty()) {
+                    album = first_property_value(properties, "ALBUM");
+                }
+                increment_value_count(albumCounts, album);
+
+                std::string artist;
+                if (!tag->artist().isEmpty()) {
+                    artist = tag->artist().to8Bit(true);
+                }
+                if (artist.empty()) {
+                    artist = first_property_value(properties, "ARTIST");
+                }
+                increment_value_count(artistCounts, artist);
+
+                std::string albumArtist = first_property_value(properties, "ALBUMARTIST");
+                if (albumArtist.empty()) {
+                    albumArtist = first_property_value(properties, "ALBUM ARTIST");
+                }
+                if (albumArtist.empty()) {
+                    albumArtist = first_property_value(properties, "ALBUM_ARTIST");
+                }
+                increment_value_count(albumArtistCounts, albumArtist);
+
+                std::string year;
+                if (tag->year() > 0) {
+                    year = std::to_string(tag->year());
+                }
+                if (year.empty()) {
+                    year = first_property_value(properties, "DATE");
+                }
+                if (year.empty()) {
+                    year = first_property_value(properties, "YEAR");
+                }
+                if (year.empty()) {
+                    year = first_property_value(properties, "ORIGINALDATE");
+                }
+
+                const std::string normalizedYear = extract_year_value(year);
+                if (!normalizedYear.empty()) {
+                    yearCounts[normalizedYear]++;
+                }
+            }
+        } catch (const std::exception &e) {
+            err(("Failed to scan folder for metadata: " + albumDir.string() + " (" + e.what() + ")").c_str());
+            ++failedCount;
+            continue;
+        }
+
+        if (audioFileCount == 0) {
+            warn(("Skipping folder (no audio files): " + albumDir.filename().string()).c_str());
+            ++skippedCount;
+            continue;
+        }
+
+        std::string album = most_common_value(albumCounts);
+        if (album.empty()) {
+            album = albumDir.filename().string();
+        }
+
+        // ALBUMARTIST tag 
+        std::string artist = most_common_value(albumArtistCounts);
+        if (artist.empty()) {
+            if (artistCounts.empty()) {
+                artist = "Unknown Artist";
+            } else if (artistCounts.size() == 1) {
+                artist = artistCounts.begin()->first;
+            } else {
+                artist = "Various Artists";
+            }
+        }
+        
+        bool yearExists = true;
+        const std::string year = most_common_value(yearCounts);
+        if (year.empty()) {
+            yearExists = false;
+        }
+
+        std::string baseName;
+        if (yearExists) {
+        baseName =
+            sanitize_dir_name(artist) + " - " + sanitize_dir_name(album) + " (" + year + ")";
+        } else {
+            baseName = sanitize_dir_name(artist) + " - " + sanitize_dir_name(album);
+        }
+
+        std::error_code ec;
+        fs::path candidate = rootDir / baseName;
+        if (fs::equivalent(albumDir, candidate, ec) && !ec) {
+            ++unchangedCount;
+            continue;
+        }
+
+        int suffix = 2;
+        // avoid collisions by appending a suffix 
+        while (fs::exists(candidate)) {
+            ec.clear();
+            if (fs::equivalent(albumDir, candidate, ec) && !ec) {
+                candidate.clear();
+                break;
+            }
+
+            candidate = rootDir / (baseName + " (" + std::to_string(suffix) + ")");
+            ++suffix;
+        }
+
+        if (candidate.empty()) {
+            ++unchangedCount;
+            continue;
+        }
+
+        ec.clear();
+        fs::rename(albumDir, candidate, ec);
+        if (ec) {
+            err(("Failed to rename folder: " + albumDir.filename().string() + " (" + ec.message() + ")").c_str());
+            ++failedCount;
+            continue;
+        }
+
+        plog(("Renamed album folder: " + albumDir.filename().string() + " -> " + candidate.filename().string())
+                 .c_str());
+        ++renamedCount;
+    }
+
+    yay(("Renamed " + std::to_string(renamedCount) + " album folder(s).").c_str());
+    if (unchangedCount > 0) {
+        plog(("Unchanged folder(s): " + std::to_string(unchangedCount)).c_str());
+    }
+    if (skippedCount > 0) {
+        warn(("Skipped folder(s): " + std::to_string(skippedCount)).c_str());
+    }
+    if (failedCount > 0) {
+        warn(("Failed folder(s): " + std::to_string(failedCount)).c_str());
+    }
+}
+
+
+// TODO: make this consistent with -raf
 void OrganizeIntoAlbums(const fs::path &inputDir, const fs::path &outputDir) {
     if (!fs::exists(inputDir) || !fs::is_directory(inputDir)) {
         err("Input path does not exist or is not a directory.");
@@ -1489,7 +1754,13 @@ void OrganizeIntoAlbums(const fs::path &inputDir, const fs::path &outputDir) {
         return;
     }
 
+    struct AlbumInfo {
+        std::string album;
+        std::string year;
+    };
+
     std::unordered_map<std::string, std::vector<fs::path>> albumMap;
+    std::unordered_map<std::string, AlbumInfo> albumInfoMap;
     std::size_t totalFiles = 0;
 
     // group files by album tag
@@ -1503,12 +1774,37 @@ void OrganizeIntoAlbums(const fs::path &inputDir, const fs::path &outputDir) {
         }
 
         std::string album = "Unsorted";
+        std::string year;
         TagLib::FileRef f(entry.path().string().c_str());
-        if (!f.isNull() && f.tag() && !f.tag()->album().isEmpty()) {
-            album = f.tag()->album().to8Bit(true);
+        if (!f.isNull() && f.tag()) {
+            if (!f.tag()->album().isEmpty()) {
+                album = f.tag()->album().to8Bit(true);
+            }
+            if (f.tag()->year() > 0) {
+                year = std::to_string(f.tag()->year());
+            }
+            if (year.empty() && f.file()) {
+                TagLib::PropertyMap properties = f.file()->properties();
+                year = first_property_value(properties, "DATE");
+                if (year.empty()) {
+                    year = first_property_value(properties, "YEAR");
+                }
+                if (year.empty()) {
+                    year = first_property_value(properties, "ORIGINALDATE");
+                }
+                year = extract_year_value(year);
+            }
         }
 
-        albumMap[album].push_back(entry.path());
+        std::string mapKey = album;
+        albumMap[mapKey].push_back(entry.path());
+        
+        // store year info if we don't have it yet or if the current file has a year and we don't
+        if (albumInfoMap.find(mapKey) == albumInfoMap.end() || 
+            (albumInfoMap[mapKey].year.empty() && !year.empty())) {
+            albumInfoMap[mapKey] = {album, year};
+        }
+        
         totalFiles++;
     }
 
@@ -1521,7 +1817,6 @@ void OrganizeIntoAlbums(const fs::path &inputDir, const fs::path &outputDir) {
           " album(s).")
              .c_str());
 
-    // sanitize to prevent bad stuff
     auto sanitizeDirName = sanitize_dir_name;
 
     int movedCount = 0;
@@ -1529,10 +1824,15 @@ void OrganizeIntoAlbums(const fs::path &inputDir, const fs::path &outputDir) {
 
     // create album dirs and move files
     for (auto i = albumMap.begin(); i != albumMap.end(); i++) {
-        const std::string &album = i->first;
+        const std::string &mapKey = i->first;
         const std::vector<fs::path> &paths = i->second;
+        const AlbumInfo &info = albumInfoMap[mapKey];
 
-        std::string safeName = sanitizeDirName(album);
+        std::string safeName = sanitizeDirName(info.album);
+        if (!info.year.empty()) {
+            safeName += " (" + info.year + ")";
+        }
+        
         fs::path albumDir = destRoot / safeName;
 
         std::error_code ec;
@@ -1604,6 +1904,7 @@ void OrganizeIntoArtistAlbum(const fs::path &inputDir, const fs::path &outputDir
         fs::path path;
         std::string artist;
         std::string album;
+        std::string year;
     };
 
     std::vector<TrackInfo> tracks;
@@ -1619,8 +1920,10 @@ void OrganizeIntoArtistAlbum(const fs::path &inputDir, const fs::path &outputDir
 
         std::string artist = "Unsorted";
         std::string album = "Unsorted";
+        std::string year;
+        
         TagLib::FileRef f(entry.path().string().c_str());
-        // if the file is valid and has tags, try to read artist and album, but fall back to defaults if not present
+        // if the file is valid and has tags, try to read artist, album, and year
         if (!f.isNull() && f.tag()) {
             if (!f.tag()->artist().isEmpty()) {
                 artist = f.tag()->artist().to8Bit(true);
@@ -1628,9 +1931,25 @@ void OrganizeIntoArtistAlbum(const fs::path &inputDir, const fs::path &outputDir
             if (!f.tag()->album().isEmpty()) {
                 album = f.tag()->album().to8Bit(true);
             }
+            if (f.tag()->year() > 0) {
+                year = std::to_string(f.tag()->year());
+            }
+            
+            // if we don't have a year from the tag, do this
+            if (year.empty() && f.file()) {
+                TagLib::PropertyMap properties = f.file()->properties();
+                year = first_property_value(properties, "DATE");
+                if (year.empty()) {
+                    year = first_property_value(properties, "YEAR");
+                }
+                if (year.empty()) {
+                    year = first_property_value(properties, "ORIGINALDATE");
+                }
+                year = extract_year_value(year);
+            }
         }
 
-        tracks.push_back({entry.path(), artist, album});
+        tracks.push_back({entry.path(), artist, album, year});
     }
 
     if (tracks.empty()) {
@@ -1648,6 +1967,9 @@ void OrganizeIntoArtistAlbum(const fs::path &inputDir, const fs::path &outputDir
         const TrackInfo &track = tracks[i];
         std::string safeArtist = sanitize_dir_name(track.artist);
         std::string safeAlbum = sanitize_dir_name(track.album);
+        if (!track.year.empty()) {
+            safeAlbum += " (" + track.year + ")";
+        }
         fs::path targetDir = destRoot / safeArtist / safeAlbum;
 
         std::error_code ec;
