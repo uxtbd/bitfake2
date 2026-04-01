@@ -28,7 +28,8 @@ jobs:
             libavformat-dev \
             libavcodec-dev \
             libavutil-dev \
-            libswresample-dev
+            libswresample-dev \
+            libcurl4-openssl-dev
 
       - name: Build bitfake2
         run: |
