@@ -1300,6 +1300,12 @@ ReplayGainByTrack CalculateReplayGainTrack(const fs::path &path) {
         return result;
     }
 
+    if (sfinfo.channels <= 0 || sfinfo.samplerate <= 0) {
+        err("Audio file has invalid stream info, may be unsupported format. :(");
+        sf_close(sndfile);
+        return result;
+    }
+
     ebur128_state *st = ebur128_init(sfinfo.channels, sfinfo.samplerate, EBUR128_MODE_I | EBUR128_MODE_TRUE_PEAK);
     if (!st) {
         err("Failed to initialize ebur128 state for replaygain calculation. :(");
