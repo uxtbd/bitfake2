@@ -44,7 +44,8 @@ int main(int argc, char *argv[]) {
                 printf("  -i,    --input <path>                    Input audio file or directory path\n");
                 printf("  -o,    --output <file>                   Output file path (must be .txt)\n");
                 printf("  -po,   --pathout <directory>             Output directory path for conversion functions\n");
-                printf("  -t,    --tag <tag:val>                   Tag to apply to input file (e.g. -t title:NewTitle)\n");
+                printf(
+                    "  -t,    --tag <tag:val>                   Tag to apply to input file (e.g. -t title:NewTitle)\n");
                 printf("  -f,    --format <fmt[:q]>                Conversion type (e.g. mp3:V0, flac:L8, opus:160)\n");
                 printf("  -gmd,  --getmetadata                     Get metadata of input file\n");
                 printf("  -grg,  --getreplaygain                   Get ReplayGain information of input file\n");
@@ -52,12 +53,16 @@ int main(int argc, char *argv[]) {
                 printf("  -atrg, --applytrackreplaygain            Calculate track replaygain and apply to file(s)\n");
                 printf("  -arg,  --applyalbumreplaygain            Calculate album replaygain and apply to file(s)\n");
                 printf("  -oia,  --organizeintoalbums              Organize audio files into album subdirectories\n");
-                printf("  -oiaa, --organizeintoartistalbum         Organize audio files into artist/album subdirectories\n");
-                printf("  -oaia, --organizealbumsintoartists       Organize album subdirectories into artist subdirectories\n");
+                printf("  -oiaa, --organizeintoartistalbum         Organize audio files into artist/album "
+                       "subdirectories\n");
+                printf("  -oaia, --organizealbumsintoartists       Organize album subdirectories into artist "
+                       "subdirectories\n");
                 printf("  -raf,  --renamealbumfolders              Rename album subfolders to Artist - Album (Year)\n");
                 printf("  -rfft, --renamefilesfromtags             Rename files from tags (e.g. Artist - Title)\n");
                 printf("  -cvrt, --convertto <fmt[:q]>             Convert input file(s) to specified format\n");
                 printf("  -sg,   --spectrogram <output.png>        Generate spectrogram image from input audio file\n");
+                printf(
+                    "  -mb,   --musicbrainz                     Fetch metadata from MusicBrainz and write to file\n");
                 printf("  -v,    --version                         Show program version\n");
                 return EXIT_SUCCESS;
             }
@@ -162,7 +167,8 @@ int main(int argc, char *argv[]) {
             if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {
                 printf("Bitfake Version %s\n", gb::version.c_str());
                 printf("By Ray17x on Github <ray@atl.tools> (alias: koyomi / kero on various platforms)\n");
-                printf("This software is provided as-is, without any express or implied warranty.\n In no event will the authors be "
+                printf("This software is provided as-is, without any express or implied warranty.\n In no event will "
+                       "the authors be "
                        "held liable for any damages arising from the use of this software.\n");
                 return EXIT_SUCCESS;
             }
@@ -520,16 +526,19 @@ int main(int argc, char *argv[]) {
             }
             op::RenameAlbumDirectoriesFromTags(gb::inputFile);
         }
-        if (strcmp(argv[j], "-sg") == 0 || strcmp(argv[j], "--spectrogram") == 0 || strcmp(argv[j], "--generatespectrogram") == 0) {
+        if (strcmp(argv[j], "-sg") == 0 || strcmp(argv[j], "--spectrogram") == 0 ||
+            strcmp(argv[j], "--generatespectrogram") == 0) {
             if (fs::is_directory(gb::inputFile)) {
                 err("Generate spectrogram requires a single audio file as input! Use -i <file>");
                 return EXIT_FAILURE;
             }
             if (gb::conversionOutputDirectory.empty()) {
-                err("Generate spectrogram requires an output directory specified with -po/--pathout to save the generated image!");
+                err("Generate spectrogram requires an output directory specified with -po/--pathout to save the "
+                    "generated image!");
                 return EXIT_FAILURE;
             }
-            fs::path outputImagePath = gb::conversionOutputDirectory / (gb::inputFile.stem().string() + "_spectrogram.png");
+            fs::path outputImagePath =
+                gb::conversionOutputDirectory / (gb::inputFile.stem().string() + "_spectrogram.png");
             op::GenerateSpectrogram(gb::inputFile, outputImagePath);
             std::error_code outputError;
             const bool outputExists = fs::exists(outputImagePath, outputError);
@@ -543,8 +552,36 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
             }
         }
+        if (strcmp(argv[j], "-mb") == 0 || strcmp(argv[j], "--musicbrainz") == 0) {
+            if (fs::is_directory(gb::inputFile)) {
+                err("MusicBrainz metadata fetch requires a single audio file as input! Use -i <file>");
+                return EXIT_FAILURE;
+            }
+
+            op::MBRequestData reqData = op::PrepareMBRequestData(gb::inputFile);
+
+            std::string xmlStr = op::GetMBXML(reqData);
+            if (xmlStr.empty()) {
+                err("MusicBrainz metadata fetch returned no data; metadata was not written.");
+                return EXIT_FAILURE;
+            }
+
+            if (xmlStr.find("recording-list count=\"0\"") != std::string::npos) {
+                err("MusicBrainz returned zero matches for this file; metadata was not written.");
+                return EXIT_FAILURE;
+            }
+
+            op::MusicBrainzXMLData mbData = op::ParseMBXML(xmlStr);
+            if (mbData.MUSICBRAINZ_TRACKID.empty() && mbData.recordingTitle.empty() && mbData.artistName.empty()) {
+                err("MusicBrainz response did not include usable recording metadata; metadata was not written.");
+                return EXIT_FAILURE;
+            }
+
+            op::WriteMetaFromMBXML(gb::inputFile, mbData);
+            yay("Metadata fetched from MusicBrainz and written to file successfully!");
+        }
     }
 
     return EXIT_SUCCESS;
 }
-// hi there... 
+// hi there...

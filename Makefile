@@ -1,12 +1,12 @@
 CXX      ?= g++
 CXXFLAGS += -std=c++17 -Wall -Wextra -I./Utilities -Wno-deprecated-declarations
-LDFLAGS  += -ltag -lfftw3 -lebur128 -lsndfile -lavformat -lavcodec -lswresample -lavutil
+LDFLAGS  += -ltag -lfftw3 -lebur128 -lsndfile -lavformat -lavcodec -lswresample -lavutil -lcurl
 
 BUILD_DIR := build
 DESTDIR   ?= 
 PREFIX    ?= /usr/local
 
-SRC := main.cpp helperfunctions.cpp filechecks.cpp globals.cpp nonusrfunctions.cpp coreoperations.cpp
+SRC := main.cpp helperfunctions.cpp filechecks.cpp globals.cpp nonusrfunctions.cpp coreoperations.cpp onlineoperations.cpp
 OBJ := $(addprefix $(BUILD_DIR)/,$(SRC:.cpp=.o))
 BIN := bitf
 
@@ -35,3 +35,6 @@ uninstall:
 
 clean:
 	rm -rf $(BUILD_DIR) $(BIN)
+
+format:
+	clang-format -i $(SRC) Utilities/*.hpp

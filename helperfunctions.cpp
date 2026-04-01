@@ -252,7 +252,6 @@ SpectralAnalysisResult SpectralAnalysis(const fs::path &path) {
     // }
     // Do not use ^^^^. It can OOM on large files.
 
-     
     const int MAX_CHUNKS = 500;
     const int SAMPLES_NEEDED = FFT_SIZE * MAX_CHUNKS;
     sf_count_t totalFrames = sfinfo.frames;
@@ -264,9 +263,9 @@ SpectralAnalysisResult SpectralAnalysis(const fs::path &path) {
     totalFrames > framesNeeded * 2 ? sf_seek(sndfile, framesNeeded, SEEK_SET) : sf_seek(sndfile, 0, SEEK_SET);
 
     float truePeak = 0.0f;
-    while (samples.size() < SAMPLES_NEEDED && 
-          (bytesRead = sf_readf_float(sndfile, buffer, BUFFER_SIZE / sfinfo.channels)) > 0) {
-        
+    while (samples.size() < SAMPLES_NEEDED &&
+           (bytesRead = sf_readf_float(sndfile, buffer, BUFFER_SIZE / sfinfo.channels)) > 0) {
+
         for (int i = 0; i < bytesRead; i++) {
             float mono_sum = 0.0f;
             // ...Add up the left channel + the right channel... huminah..
@@ -299,7 +298,7 @@ SpectralAnalysisResult SpectralAnalysis(const fs::path &path) {
     }
 
     // Setup FFT
-    // no longer complex->complex. 
+    // no longer complex->complex.
     // real->complex is better in this case, should save mem and time (better for slower computers)
     fftw_plan plan;
     double *in;
@@ -353,7 +352,10 @@ SpectralAnalysisResult SpectralAnalysis(const fs::path &path) {
     }
 
     TagLib::FileRef fileRef(path.string().c_str());
-    float sampleRate = sfinfo.samplerate > 0 ? static_cast<float>(sfinfo.samplerate) : 44100.0f; // Assume Audio is a 44.1kHz sample rate if we can't read it for both the user's benefit and to avoid divide-by-zero errs.
+    float sampleRate = sfinfo.samplerate > 0
+                           ? static_cast<float>(sfinfo.samplerate)
+                           : 44100.0f; // Assume Audio is a 44.1kHz sample rate if we can't read it for both the user's
+                                       // benefit and to avoid divide-by-zero errs.
     int bitrate = fileRef.audioProperties() ? fileRef.audioProperties()->bitrate() : 0; // Get bitrate metadata
 
     std::vector<float> bandEnergies(10, 0.0f);
@@ -362,19 +364,19 @@ SpectralAnalysisResult SpectralAnalysis(const fs::path &path) {
     float multiplier = pow(static_cast<float>(FFT_SIZE / 2) / 1.0f, 1.0f / 10.0f);
     for (int b = 0; b < 10; b++) {
         int endBin = static_cast<int>(pow(multiplier, b + 1));
-        
+
         if (b == 9 || endBin > (FFT_SIZE / 2)) {
             endBin = FFT_SIZE / 2;
         }
-        
+
         if (endBin <= currentBin) {
-            endBin = currentBin + 1; 
+            endBin = currentBin + 1;
         }
 
         for (int i = currentBin; i < endBin; i++) {
             bandEnergies[b] += MeanMagnitude[i];
         }
-        
+
         bandEnergies[b] /= (endBin - currentBin);
         currentBin = endBin;
     }
@@ -396,8 +398,9 @@ SpectralAnalysisResult SpectralAnalysis(const fs::path &path) {
 
     int spectralHoles = 0;
     int bin_1k = static_cast<int>((1000.0f * FFT_SIZE) / sampleRate);
-    if (bin_1k == 0) bin_1k = 1;
-    
+    if (bin_1k == 0)
+        bin_1k = 1;
+
     for (int i = bin_1k + 1; i < (FFT_SIZE / 2) - 1; i++) {
         float currentMag = MeanMagnitude[i];
         float prevMag = MeanMagnitude[i - 1];
@@ -407,27 +410,28 @@ SpectralAnalysisResult SpectralAnalysis(const fs::path &path) {
             spectralHoles++;
         }
     }
-    
+
     // Increased tolerance to 5% of bins to avoid flagging comb-filtered heavy rock/noise
     bool highlySparse = (spectralHoles > ((FFT_SIZE / 2) * 0.05f));
 
-    tmpresult.frequencyCutoff = sampleRate / 2.0f; // Nyquist
+    tmpresult.frequencyCutoff = sampleRate / 2.0f;                       // Nyquist
     bool spectralLossy = coefficientOfVariation > 1.75f || highlySparse; // Relaxed CV check for dynamic music
- 
+
     bool highFreqRolloff = false;
     int bin_16k = static_cast<int>((16000.0f * FFT_SIZE) / sampleRate);
     int bin_20k = static_cast<int>((20000.0f * FFT_SIZE) / sampleRate);
     int max_bin = FFT_SIZE / 2;
-    
+
     if (bin_16k < max_bin) {
         float energyAbove16k = 0.0f;
         float energyAbove20k = 0.0f;
-        
+
         for (int i = bin_16k; i < max_bin; i++) {
             energyAbove16k += MeanMagnitude[i];
-            if (i >= bin_20k) energyAbove20k += MeanMagnitude[i];
+            if (i >= bin_20k)
+                energyAbove20k += MeanMagnitude[i];
         }
-        
+
         energyAbove16k /= (max_bin - bin_16k);
         energyAbove20k = (bin_20k < max_bin) ? (energyAbove20k / (max_bin - bin_20k)) : 0.0f;
 
@@ -439,7 +443,7 @@ SpectralAnalysisResult SpectralAnalysis(const fs::path &path) {
     }
 
     bool bitrateLossy = (bitrate > 32 && bitrate < 320); // Catch all MP3 VBR variants
-    
+
     tmpresult.likelyLossy = spectralLossy || bitrateLossy || highFreqRolloff;
 
     tmpresult.noiseFlorElevation = coefficientOfVariation * 100.0f;

@@ -32,15 +32,6 @@ namespace gb = globals;
 #include <fftw3.h>
 #include <complex>
 #include <exception>
-// #include <musicbrainz5/Query.h>
-// #include <musicbrainz5/Metadata.h>
-// #include <musicbrainz5/Artist.h>
-// #include <musicbrainz5/Release.h>
-// #include <musicbrainz5/Track.h>
-// #include <musicbrainz5/Recording.h>
-// #include <musicbrainz5/ReleaseGroup.h>
-// #include <musicbrainz5/NameCredit.h>
-// #include <musicbrainz5/ArtistCredit.h>
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -88,13 +79,8 @@ Rgb SpekLikeColor(double normalizedDb) {
     const double t = Clamp01(normalizedDb);
     constexpr std::array<double, 7> positions = {0.0, 0.12, 0.28, 0.46, 0.66, 0.84, 1.0};
     constexpr std::array<Rgb, 7> colors = {
-        Rgb{0, 0, 0},
-        Rgb{15, 8, 48},
-        Rgb{72, 16, 130},
-        Rgb{170, 16, 110},
-        Rgb{255, 36, 18},
-        Rgb{255, 168, 0},
-        Rgb{255, 255, 210},
+        Rgb{0, 0, 0},     Rgb{15, 8, 48},   Rgb{72, 16, 130},   Rgb{170, 16, 110},
+        Rgb{255, 36, 18}, Rgb{255, 168, 0}, Rgb{255, 255, 210},
     };
 
     for (std::size_t i = 1; i < positions.size(); ++i) {
@@ -158,8 +144,8 @@ void DrawSevenSegmentChar(std::vector<std::uint8_t> &image, int width, int heigh
             FillRect(image, width, height, x + stroke, y, glyphWidth - 2 * stroke, stroke, color);
             break;
         case 1:
-            FillRect(image, width, height, x + glyphWidth - stroke, y + stroke, stroke,
-                     glyphHeight / 2 - stroke, color);
+            FillRect(image, width, height, x + glyphWidth - stroke, y + stroke, stroke, glyphHeight / 2 - stroke,
+                     color);
             break;
         case 2:
             FillRect(image, width, height, x + glyphWidth - stroke, y + glyphHeight / 2, stroke,
@@ -317,7 +303,7 @@ std::array<std::uint8_t, 7> Glyph5x7(char ch) {
         return {0x11, 0x11, 0x0A, 0x04, 0x04, 0x04, 0x04};
     case 'Z':
         return {0x1F, 0x01, 0x02, 0x04, 0x08, 0x10, 0x1F};
-    case '(': 
+    case '(':
         return {0x02, 0x04, 0x08, 0x08, 0x08, 0x04, 0x02};
     case ')':
         return {0x08, 0x04, 0x02, 0x02, 0x02, 0x04, 0x08};
@@ -460,8 +446,7 @@ bool WriteRgbPng(const fs::path &outputPath, int width, int height, const std::v
 
     for (int y = 0; y < height; ++y) {
         std::memcpy(frame->data[0] + static_cast<std::size_t>(y) * frame->linesize[0],
-                    rgbData.data() + static_cast<std::size_t>(y * width) * 3,
-                    static_cast<std::size_t>(width) * 3);
+                    rgbData.data() + static_cast<std::size_t>(y * width) * 3, static_cast<std::size_t>(width) * 3);
     }
 
     status = avcodec_send_frame(codecContext, frame);
@@ -865,7 +850,7 @@ bool ConvertWithLibAv(const fs::path &inputPath, const fs::path &outputFile, Ope
             err("libav: failed to compute SWR output size.");
             return false;
         }
-        
+
         if (maxOutSamples == 0) {
             return true;
         }
@@ -1546,8 +1531,8 @@ static std::string extract_year_value(const std::string &text) {
             continue;
         }
 
-        const int year = (text[i] - '0') * 1000 + (text[i + 1] - '0') * 100 + (text[i + 2] - '0') * 10 +
-                         (text[i + 3] - '0');
+        const int year =
+            (text[i] - '0') * 1000 + (text[i + 1] - '0') * 100 + (text[i + 2] - '0') * 10 + (text[i + 3] - '0');
         if (year >= 1000 && year <= 2999) {
             return text.substr(i, 4);
         }
@@ -1563,7 +1548,7 @@ void RenameAlbumDirectoriesFromTags(const fs::path &rootDir) {
     }
 
     std::vector<fs::path> albumDirs;
-    // rename only direct subdirs 
+    // rename only direct subdirs
     for (const auto &entry : fs::directory_iterator(rootDir)) {
         if (entry.is_directory()) {
             albumDirs.push_back(entry.path());
@@ -1670,7 +1655,7 @@ void RenameAlbumDirectoriesFromTags(const fs::path &rootDir) {
             album = albumDir.filename().string();
         }
 
-        // ALBUMARTIST tag 
+        // ALBUMARTIST tag
         std::string artist = most_common_value(albumArtistCounts);
         if (artist.empty()) {
             if (artistCounts.empty()) {
@@ -1690,8 +1675,7 @@ void RenameAlbumDirectoriesFromTags(const fs::path &rootDir) {
 
         std::string baseName;
         if (yearExists) {
-        baseName =
-            sanitize_dir_name(artist) + " - " + sanitize_dir_name(album) + " (" + year + ")";
+            baseName = sanitize_dir_name(artist) + " - " + sanitize_dir_name(album) + " (" + year + ")";
         } else {
             baseName = sanitize_dir_name(artist) + " - " + sanitize_dir_name(album);
         }
@@ -1704,7 +1688,7 @@ void RenameAlbumDirectoriesFromTags(const fs::path &rootDir) {
         }
 
         int suffix = 2;
-        // avoid collisions by appending a suffix 
+        // avoid collisions by appending a suffix
         while (fs::exists(candidate)) {
             ec.clear();
             if (fs::equivalent(albumDir, candidate, ec) && !ec) {
@@ -1729,8 +1713,8 @@ void RenameAlbumDirectoriesFromTags(const fs::path &rootDir) {
             continue;
         }
 
-        plog(("Renamed album folder: " + albumDir.filename().string() + " -> " + candidate.filename().string())
-                 .c_str());
+        plog(
+            ("Renamed album folder: " + albumDir.filename().string() + " -> " + candidate.filename().string()).c_str());
         ++renamedCount;
     }
 
@@ -1745,7 +1729,6 @@ void RenameAlbumDirectoriesFromTags(const fs::path &rootDir) {
         warn(("Failed folder(s): " + std::to_string(failedCount)).c_str());
     }
 }
-
 
 // TODO: make this consistent with -raf
 void OrganizeIntoAlbums(const fs::path &inputDir, const fs::path &outputDir) {
@@ -1804,13 +1787,12 @@ void OrganizeIntoAlbums(const fs::path &inputDir, const fs::path &outputDir) {
 
         std::string mapKey = album;
         albumMap[mapKey].push_back(entry.path());
-        
+
         // store year info if we don't have it yet or if the current file has a year and we don't
-        if (albumInfoMap.find(mapKey) == albumInfoMap.end() || 
-            (albumInfoMap[mapKey].year.empty() && !year.empty())) {
+        if (albumInfoMap.find(mapKey) == albumInfoMap.end() || (albumInfoMap[mapKey].year.empty() && !year.empty())) {
             albumInfoMap[mapKey] = {album, year};
         }
-        
+
         totalFiles++;
     }
 
@@ -1838,7 +1820,7 @@ void OrganizeIntoAlbums(const fs::path &inputDir, const fs::path &outputDir) {
         if (!info.year.empty()) {
             safeName += " (" + info.year + ")";
         }
-        
+
         fs::path albumDir = destRoot / safeName;
 
         std::error_code ec;
@@ -1927,7 +1909,7 @@ void OrganizeIntoArtistAlbum(const fs::path &inputDir, const fs::path &outputDir
         std::string artist = "Unsorted";
         std::string album = "Unsorted";
         std::string year;
-        
+
         TagLib::FileRef f(entry.path().string().c_str());
         // if the file is valid and has tags, try to read artist, album, and year
         if (!f.isNull() && f.tag()) {
@@ -1940,7 +1922,7 @@ void OrganizeIntoArtistAlbum(const fs::path &inputDir, const fs::path &outputDir
             if (f.tag()->year() > 0) {
                 year = std::to_string(f.tag()->year());
             }
-            
+
             // if we don't have a year from the tag, do this
             if (year.empty() && f.file()) {
                 TagLib::PropertyMap properties = f.file()->properties();
@@ -2052,7 +2034,7 @@ void OrganizeAlbumsIntoArtists(const fs::path &rootDir) {
         std::size_t audioFileCount = 0;
 
         try {
-            // scan files 
+            // scan files
             for (const auto &entry : fs::recursive_directory_iterator(albumDir)) {
                 if (!entry.is_regular_file()) {
                     continue;
@@ -2151,7 +2133,7 @@ void OrganizeAlbumsIntoArtists(const fs::path &rootDir) {
             }
         }
 
-        // do the 
+        // do the
         ec.clear();
         fs::rename(albumDir, destination, ec);
         if (ec) {
@@ -2160,7 +2142,9 @@ void OrganizeAlbumsIntoArtists(const fs::path &rootDir) {
             continue;
         }
 
-        plog(("Moved album folder: " + albumDir.filename().string() + " -> " + safeArtist + "/" + destination.filename().string()).c_str());
+        plog(("Moved album folder: " + albumDir.filename().string() + " -> " + safeArtist + "/" +
+              destination.filename().string())
+                 .c_str());
         ++sortedCount;
     }
     yay(("Sorted " + std::to_string(sortedCount) + " album folder(s) into artist directories.").c_str());
@@ -2172,7 +2156,7 @@ void OrganizeAlbumsIntoArtists(const fs::path &rootDir) {
     }
 }
 void RenameFilesFromTags(const fs::path &rootDir) {
-      if (!fs::exists(rootDir)) {
+    if (!fs::exists(rootDir)) {
         err("Input path does not exist.");
         return;
     }
@@ -2243,7 +2227,7 @@ void RenameFilesFromTags(const fs::path &rootDir) {
         newBaseName += title;
         // prevent bad things
         newBaseName = sanitize_dir_name(newBaseName);
-        
+
         fs::path newPath = filePath.parent_path() / (newBaseName + filePath.extension().string());
 
         std::error_code ec;
@@ -2257,8 +2241,8 @@ void RenameFilesFromTags(const fs::path &rootDir) {
             int suffix = 2;
             fs::path candidate;
             do {
-                candidate = filePath.parent_path() / 
-                    (newBaseName + " (" + std::to_string(suffix) + ")" + filePath.extension().string());
+                candidate = filePath.parent_path() /
+                            (newBaseName + " (" + std::to_string(suffix) + ")" + filePath.extension().string());
                 ++suffix;
             } while (fs::exists(candidate));
             newPath = candidate;
@@ -2339,7 +2323,6 @@ void MassTagDirectory(const fs::path &dirPath, const std::string &tag, const std
     }
 }
 
-
 void GenerateSpectrogram(const fs::path &inputPath, const fs::path &outputImagePath) {
     if (!fs::exists(inputPath) || !fs::is_regular_file(inputPath) || !fc::IsValidAudioFile(inputPath)) {
         err("Input path does not exist or is not a regular file.");
@@ -2351,7 +2334,8 @@ void GenerateSpectrogram(const fs::path &inputPath, const fs::path &outputImageP
         tmpTitle = tagFile.tag()->title().to8Bit(true);
         tmpArtist = tagFile.tag()->artist().to8Bit(true);
     } else {
-        warn("Failed to read tags from input file for spectrogram title. Title and artist will be omitted from the image.");
+        warn("Failed to read tags from input file for spectrogram title. Title and artist will be omitted from the "
+             "image.");
     }
     SF_INFO sfinfo{};
     SNDFILE *sndfile = sf_open(inputPath.string().c_str(), SFM_READ, &sfinfo);
@@ -2431,9 +2415,9 @@ void GenerateSpectrogram(const fs::path &inputPath, const fs::path &outputImageP
     }
 
     std::vector<double> fftIn(FFT_SIZE, 0.0);
-    fftw_complex* fftOut = fftw_alloc_complex(static_cast<std::size_t>(numBins));
+    fftw_complex *fftOut = fftw_alloc_complex(static_cast<std::size_t>(numBins));
     fftw_plan plan = fftw_plan_dft_r2c_1d(FFT_SIZE, fftIn.data(), fftOut, FFTW_ESTIMATE);
-if (!plan) {
+    if (!plan) {
         fftw_free(fftOut);
         err("Failed to allocate FFT plan for spectrogram generation.");
         return;
@@ -2459,7 +2443,8 @@ if (!plan) {
         const std::size_t startIndex = (usableSamples * static_cast<std::size_t>(x)) / denominator;
 
         for (int i = 0; i < FFT_SIZE; ++i) {
-            fftIn[static_cast<std::size_t>(i)] = monoSamples[startIndex + static_cast<std::size_t>(i)] * hannWindow[static_cast<std::size_t>(i)];
+            fftIn[static_cast<std::size_t>(i)] =
+                monoSamples[startIndex + static_cast<std::size_t>(i)] * hannWindow[static_cast<std::size_t>(i)];
         }
 
         fftw_execute(plan);
@@ -2489,7 +2474,7 @@ if (!plan) {
     }
 
     fftw_destroy_plan(plan);
-    fftw_free(fftOut); 
+    fftw_free(fftOut);
 
     const int xGridTicks = 10;
     for (int i = 0; i <= xGridTicks; ++i) {
@@ -2537,15 +2522,16 @@ if (!plan) {
     for (int db = 0; db >= static_cast<int>(minDb); db -= 20) {
         const double normalized = (db - minDb) / (maxDb - minDb);
         const int y = colorBarY + static_cast<int>((1.0 - normalized) * plotHeight);
-        DrawHorizontalLine(image, imageWidth, imageHeight, colorBarX + colorBarWidth, colorBarX + colorBarWidth + 8,
-                           y, axisColor);
+        DrawHorizontalLine(image, imageWidth, imageHeight, colorBarX + colorBarWidth, colorBarX + colorBarWidth + 8, y,
+                           axisColor);
         DrawNumberText(image, imageWidth, imageHeight, colorBarX + colorBarWidth + 14, y - 5, 2, std::to_string(db),
                        labelColor);
     }
 
     std::ostringstream titleStream;
-    titleStream << std::fixed << std::setprecision(1) << "("<< tmpTitle << " - " << tmpArtist << ")" << " - SPECTROGRAM - SR " << (sfinfo.samplerate / 1000.0)
-                << " KHZ / DUR " << FormatMinutesSeconds(durationSec);
+    titleStream << std::fixed << std::setprecision(1) << "(" << tmpTitle << " - " << tmpArtist << ")"
+                << " - SPECTROGRAM - SR " << (sfinfo.samplerate / 1000.0) << " KHZ / DUR "
+                << FormatMinutesSeconds(durationSec);
     const std::string mainTitle = titleStream.str();
     const int mainTitleScale = 3;
     const int mainTitleWidth = LabelTextWidth(mainTitle, mainTitleScale);
@@ -2563,9 +2549,8 @@ if (!plan) {
 
     const std::string colorBarTitle = "LEVEL (DB)";
     const int colorBarTitleWidth = LabelTextWidth(colorBarTitle, 2);
-    DrawLabelText(image, imageWidth, imageHeight,
-                  colorBarX + (colorBarWidth - colorBarTitleWidth) / 2,
-                  plotY - 22, 2, colorBarTitle, labelColor);
+    DrawLabelText(image, imageWidth, imageHeight, colorBarX + (colorBarWidth - colorBarTitleWidth) / 2, plotY - 22, 2,
+                  colorBarTitle, labelColor);
 
     fs::path outputPath = outputImagePath;
     if (outputPath.extension().empty()) {

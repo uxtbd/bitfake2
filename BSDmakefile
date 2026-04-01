@@ -30,14 +30,14 @@ LOCALBASE?= /usr/local
 .endif
 
 CXXFLAGS += -std=c++17 -Wall -Wextra -I./Utilities -I$(LOCALBASE)/include -Wno-deprecated-declarations
-LDFLAGS  += -L$(LOCALBASE)/lib -ltag -lfftw3 -lebur128 -lsndfile -lavformat -lavcodec -lswresample -lavutil -pthread
+LDFLAGS  += -L$(LOCALBASE)/lib -ltag -lfftw3 -lebur128 -lsndfile -lavformat -lavcodec -lswresample -lavutil -lcurl -pthread
 
 BUILD_DIR= build
 DESTDIR  ?=
 PREFIX   ?= $(LOCALBASE)
 BINDIR   = $(DESTDIR)$(PREFIX)/bin
 
-SRC= main.cpp helperfunctions.cpp filechecks.cpp globals.cpp nonusrfunctions.cpp coreoperations.cpp
+SRC= main.cpp helperfunctions.cpp filechecks.cpp globals.cpp nonusrfunctions.cpp coreoperations.cpp onlineoperations.cpp
 
 .for _src in $(SRC)
 OBJ+= $(BUILD_DIR)/$(_src:S/.cpp/.o/)

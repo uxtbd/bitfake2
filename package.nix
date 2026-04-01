@@ -6,6 +6,7 @@
   libebur128,
   libsndfile,
   ffmpeg,
+  curl,
 }:
 
 stdenv.mkDerivation {
@@ -20,6 +21,7 @@ stdenv.mkDerivation {
     libebur128
     libsndfile
     ffmpeg
+    curl
   ];
 
   installFlags = [ "PREFIX=${placeholder "out"}" ];

@@ -150,6 +150,30 @@ struct AttachedCoverArt {
     int pictureType = 3;
 };
 
+struct MusicBrainzXMLData {
+    std::string recordingTitle;
+    std::string artistName;
+    std::string releaseTitle;
+    std::string releaseDate;
+    int trackNumber;
+    std::string date;
+    std::vector<std::string> genres;
+    std::string MUSICBRAINZ_ALBUMID, MUSICBRAINZ_ARTISTID, MUSICBRAINZ_TRACKID;
+};
+
+struct MBRequestData {
+    // useful data for searching for song
+    // use Title - Artist as first check (Kiss The Ladder - Fleshwater) is most likely yielding correct results
+    // if title missing, fall back to track id - album - artist
+    // if artist missing, fall back to track id - album
+    // if album missing, fall back to track id title/artist
+    // do not prep MBReq for a file that is missing both title and artist, very risky
+    std::string artist;
+    std::string title;
+    std::string album;
+    int trackNumber;
+};
+
 // Function Declarations:
 
 // Non-user functions
@@ -187,6 +211,12 @@ void RenameAlbumDirectoriesFromTags(const fs::path &rootDir);
 void OrganizeAlbumsIntoArtists(const fs::path &rootDir);
 void RenameFilesFromTags(const fs::path &rootDir);
 void GenerateSpectrogram(const fs::path &inputPath, const fs::path &outputImagePath);
+
+// Online Operations
+MBRequestData PrepareMBRequestData(const fs::path &inputPath);
+std::string GetMBXML(const MBRequestData &reqData);
+MusicBrainzXMLData ParseMBXML(const std::string &xmlStr);
+void WriteMetaFromMBXML(const fs::path &inputPath, const MusicBrainzXMLData &mbData);
 } // namespace Operations
 
 #endif // OPERATIONS_HPP
