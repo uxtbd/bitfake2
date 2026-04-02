@@ -6,7 +6,6 @@
 #include "consoleout.hpp"
 namespace fs = std::filesystem;
 #include "operations.hpp"
-namespace op = Operations;
 
 namespace FileChecks {
 // Checks if the parent directory of the given path exists. If the file itself exists,
@@ -31,8 +30,8 @@ inline bool ParentExists(const fs::path &path) {
 bool IsValidAudioFile(const fs::path &path); // Checks via extensions
 bool IsTrueAudio(
     const fs::path &path); // Checks via file signatures for senstive operations (As described in filechecks.cpp)
-bool IsSpecificAudioFormat(const fs::path &path, op::AudioFormat format);
-inline bool IsSpecficAudioFormat(const fs::path &path, op::AudioFormat format) {
+bool IsSpecificAudioFormat(const fs::path &path, bitfake::type::AudioFormat format);
+inline bool IsSpecficAudioFormat(const fs::path &path, bitfake::type::AudioFormat format) {
     return IsSpecificAudioFormat(path, format);
 }
 

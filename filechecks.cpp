@@ -8,13 +8,7 @@ using namespace ConsoleOut;
 #include <cstring>
 namespace fs = std::filesystem;
 
-/*
-    filecheks.cpp
-    This file contains the implementation of the functions declared in filechecks.hpp.
-    These functions are used to perform various checks on files, such as validating audio files,
-    checking for the existence of parent directories, and more. The goal is to centralize all
-    file-related checks in one place for better organization and maintainability.
-*/
+
 
 namespace FileChecks {
 
@@ -92,7 +86,7 @@ bool IsTrueAudio(const fs::path &path) {
     return false;
 }
 
-bool IsSpecificAudioFormat(const fs::path &path, op::AudioFormat format) {
+bool IsSpecificAudioFormat(const fs::path &path, bitfake::type::AudioFormat format) {
     if (!IsTrueAudio(path)) {
         return false; // Not a valid audio file
     }
@@ -113,13 +107,13 @@ bool IsSpecificAudioFormat(const fs::path &path, op::AudioFormat format) {
     }
 
     switch (format) {
-    case op::AudioFormat::MP3:
+    case bitfake::type::AudioFormat::MP3:
         return (memcmp(buffer, "ID3", 3) == 0 || (buffer[0] == 0xFF && (buffer[1] & 0xE0) == 0xE0));
-    case op::AudioFormat::WAV:
+    case bitfake::type::AudioFormat::WAV:
         return (memcmp(buffer, "RIFF", 4) == 0 && memcmp(buffer + 8, "WAVE", 4) == 0);
-    case op::AudioFormat::FLAC:
+    case bitfake::type::AudioFormat::FLAC:
         return (memcmp(buffer, "fLaC", 4) == 0);
-    case op::AudioFormat::OGG:
+    case bitfake::type::AudioFormat::OGG:
         return (memcmp(buffer, "OggS", 4) == 0);
     // Add more cases for other formats as needed
     default:

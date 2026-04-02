@@ -6,7 +6,6 @@ namespace fs = std::filesystem;
 #include "Utilities/filechecks.hpp"
 namespace fc = FileChecks;
 #include "Utilities/operations.hpp"
-namespace op = Operations;
 #include "Utilities/globals.hpp"
 namespace gb = globals;
 #include <taglib/fileref.h>
@@ -487,17 +486,17 @@ bool WriteRgbPng(const fs::path &outputPath, int width, int height, const std::v
     return true;
 }
 
-const AVCodec *FindPreferredEncoder(Operations::AudioFormat format) {
+const AVCodec *FindPreferredEncoder(bitfake::type::AudioFormat format) {
     switch (format) {
-    case Operations::AudioFormat::MP3:
+    case bitfake::type::AudioFormat::MP3:
         if (const AVCodec *codec = avcodec_find_encoder_by_name("libmp3lame")) {
             return codec;
         }
         return avcodec_find_encoder(AV_CODEC_ID_MP3);
-    case Operations::AudioFormat::AAC:
-    case Operations::AudioFormat::M4A:
+    case bitfake::type::AudioFormat::AAC:
+    case bitfake::type::AudioFormat::M4A:
         return avcodec_find_encoder(AV_CODEC_ID_AAC);
-    case Operations::AudioFormat::OPUS:
+    case bitfake::type::AudioFormat::OPUS:
         if (const AVCodec *codec = avcodec_find_encoder_by_name("libopus")) {
             return codec;
         }
@@ -507,15 +506,15 @@ const AVCodec *FindPreferredEncoder(Operations::AudioFormat format) {
     }
 }
 
-const char *ContainerForFormat(Operations::AudioFormat format) {
+const char *ContainerForFormat(bitfake::type::AudioFormat format) {
     switch (format) {
-    case Operations::AudioFormat::MP3:
+    case bitfake::type::AudioFormat::MP3:
         return "mp3";
-    case Operations::AudioFormat::AAC:
+    case bitfake::type::AudioFormat::AAC:
         return "adts";
-    case Operations::AudioFormat::M4A:
+    case bitfake::type::AudioFormat::M4A:
         return "ipod";
-    case Operations::AudioFormat::OPUS:
+    case bitfake::type::AudioFormat::OPUS:
         return "ogg";
     default:
         return nullptr;
@@ -546,7 +545,7 @@ AVSampleFormat PickSampleFormat(const AVCodec *encoder) {
     return encoder->sample_fmts[0];
 }
 
-bool ConvertWithLibAv(const fs::path &inputPath, const fs::path &outputFile, Operations::AudioFormat format,
+bool ConvertWithLibAv(const fs::path &inputPath, const fs::path &outputFile, bitfake::type::AudioFormat format,
                       int opusBitrateKbps) {
     AVFormatContext *inputFormat = nullptr;
     AVFormatContext *outputFormat = nullptr;
@@ -676,7 +675,7 @@ bool ConvertWithLibAv(const fs::path &inputPath, const fs::path &outputFile, Ope
         return false;
     }
     encoderContext->sample_fmt = PickSampleFormat(encoder);
-    if (format == Operations::AudioFormat::OPUS) {
+    if (format == bitfake::type::AudioFormat::OPUS) {
         if (opusBitrateKbps > 0) {
             encoderContext->bit_rate = opusBitrateKbps * 1000;
         } else {
@@ -1030,35 +1029,11 @@ bool ConvertWithLibAv(const fs::path &inputPath, const fs::path &outputFile, Ope
     cleanup();
     return true;
 }
-
-// struct MBAudioInfo {
-//     std::string MUSICBRAINZ_ALBUMARTISTID;
-//     std::string MUSICBRAINZ_ALBUMID;
-//     std::string MUSICBRAINZ_ALBUMSTATUS;
-//     std::string MUSICBRAINZ_ARTISTID;
-//     std::string MUSICBRAINZ_RELEASEGROUPID;
-//     std::string MUSICBRAINZ_RELEASETRACKID;
-//     std::string MUSICBRAINZ_TRACKID;
-//     std::string MUSICBRAINZ_WORKID;
-// };
-
-// duh- dah -duh -dah dah- disappointed in this fuck ass API
-// (Disappointed - Death Grips)
-// MBAudioInfo GetMBIDFromDB(const fs::path &inputPath);
-// This function has not been implemented because the API is hard to understand and there is lack of documentation.
 } // namespace
 
-namespace Operations {
-// Core operations
-
-/*
-    This file will define functions for core operations of the program, such as conversion, replaygain calculation,
-    mass tagging for a directory, and other nitty gritty functions that will be a hassle to program. Will try to keep
-   things as clean and organized as possible, but no promises >:D
-*/
-
-bool ConvertToFileType(const fs::path &inputPath, const fs::path &outputPath, AudioFormat format,
-                       VBRQualities quality) {
+namespace bitfake::nonuser {
+    bool ConvertToFileType(const fs::path &inputPath, const fs::path &outputPath, bitfake::type::AudioFormat format,
+                       bitfake::type::VBRQualities quality) {
     if (!fs::exists(inputPath)) {
         err("Input path does not exist.");
         return false;
@@ -1107,8 +1082,8 @@ bool ConvertToFileType(const fs::path &inputPath, const fs::path &outputPath, Au
         return false;
     }
 
-    if (!fc::IsSpecificAudioFormat(inputPath, op::AudioFormat::FLAC) &&
-        !fc::IsSpecificAudioFormat(inputPath, op::AudioFormat::WAV)) {
+    if (!fc::IsSpecificAudioFormat(inputPath, bitfake::type::AudioFormat::FLAC) &&
+        !fc::IsSpecificAudioFormat(inputPath, bitfake::type::AudioFormat::WAV)) {
         warn("Input file is not a lossless file. Conversion may result in quality loss. :(");
     }
 
@@ -1116,22 +1091,22 @@ bool ConvertToFileType(const fs::path &inputPath, const fs::path &outputPath, Au
 
     fs::path outputFile = outputPath;
     if (fs::is_directory(outputPath)) {
-        outputFile = outputPath / (inputPath.stem().string() + OutputExtensionForFormat(format));
+        outputFile = outputPath / (inputPath.stem().string() + bitfake::coverart::OutputExtensionForFormat(format));
     }
 
     const bool useLibsndfilePath =
-        (format == AudioFormat::WAV || format == AudioFormat::FLAC || format == AudioFormat::OGG);
+        (format == bitfake::type::AudioFormat::WAV || format == bitfake::type::AudioFormat::FLAC || format == bitfake::type::AudioFormat::OGG);
 
     if (useLibsndfilePath) {
         int outputFormat = 0;
         switch (format) {
-        case AudioFormat::WAV:
+        case bitfake::type::AudioFormat::WAV:
             outputFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
             break;
-        case AudioFormat::FLAC:
+        case bitfake::type::AudioFormat::FLAC:
             outputFormat = SF_FORMAT_FLAC | SF_FORMAT_PCM_16;
             break;
-        case AudioFormat::OGG:
+        case bitfake::type::AudioFormat::OGG:
             outputFormat = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
             break;
         default:
@@ -1187,10 +1162,10 @@ bool ConvertToFileType(const fs::path &inputPath, const fs::path &outputPath, Au
         }
     }
 
-    if (InputHasAttachedCover(inputPath)) {
-        if (!FormatSupportsAttachedCover(format)) {
+    if (bitfake::coverart::InputHasAttachedCover(inputPath)) {
+        if (!bitfake::coverart::FormatSupportsAttachedCover(format)) {
             warn("Input has cover art, but selected output format does not support attached cover art copy yet.");
-        } else if (!CopyAttachedCover(inputPath, outputFile, format)) {
+        } else if (!bitfake::coverart::CopyAttachedCover(inputPath, outputFile, format)) {
             warn("Input has cover art, but cover art copy to output failed.");
         }
     }
@@ -1213,8 +1188,10 @@ bool ConvertToFileType(const fs::path &inputPath, const fs::path &outputPath, Au
     yay(outputFile.c_str());
     return true;
 }
+}
 
-void ApplyReplayGain(const fs::path &path, ReplayGainByTrack trackGainInfo, ReplayGainByAlbum albumGainInfo) {
+namespace bitfake::replaygain {
+void ApplyReplayGain(const fs::path &path, bitfake::type::ReplayGainByTrack trackGainInfo, bitfake::type::ReplayGainByAlbum albumGainInfo) {
     bool trackInfoEmpty = (trackGainInfo.trackGain == 0.0f && trackGainInfo.trackPeak == 0.0f);
     bool albumInfoEmpty = (albumGainInfo.albumGain == 0.0f && albumGainInfo.albumPeak == 0.0f);
 
@@ -1225,7 +1202,7 @@ void ApplyReplayGain(const fs::path &path, ReplayGainByTrack trackGainInfo, Repl
     }
     TagLib::PropertyMap properties = f.file()->properties();
 
-    AudioMetadata existingMetadata = GetMetaData(path);
+    bitfake::type::AudioMetadata existingMetadata = bitfake::extract::GetMetaData(path);
 
     if (trackInfoEmpty && albumInfoEmpty) {
         return;
@@ -1235,9 +1212,9 @@ void ApplyReplayGain(const fs::path &path, ReplayGainByTrack trackGainInfo, Repl
         const std::string trackArtist = existingMetadata.artist.empty() ? "<unknown artist>" : existingMetadata.artist;
         printf("--- %s - %s\nAlbum Gain / Peak: %.2f dB / %.6f\n\n", trackTitle.c_str(), trackArtist.c_str(),
                albumGainInfo.albumGain, albumGainInfo.albumPeak);
-        StageMetaDataChanges(properties, "REPLAYGAIN_ALBUM_GAIN", std::to_string(albumGainInfo.albumGain) + " dB");
-        StageMetaDataChanges(properties, "REPLAYGAIN_ALBUM_PEAK", std::to_string(albumGainInfo.albumPeak));
-        CommitMetaDataChanges(path, properties);
+        bitfake::tagging::StageMetaDataChanges(properties, "REPLAYGAIN_ALBUM_GAIN", std::to_string(albumGainInfo.albumGain) + " dB");
+        bitfake::tagging::StageMetaDataChanges(properties, "REPLAYGAIN_ALBUM_PEAK", std::to_string(albumGainInfo.albumPeak));
+        bitfake::tagging::CommitMetaDataChanges(path, properties);
         return;
     }
     if (albumInfoEmpty) {
@@ -1245,9 +1222,9 @@ void ApplyReplayGain(const fs::path &path, ReplayGainByTrack trackGainInfo, Repl
         const std::string trackArtist = existingMetadata.artist.empty() ? "<unknown artist>" : existingMetadata.artist;
         printf("--- %s - %s\nTrack Gain / Peak: %.2f dB / %.6f\n\n", trackTitle.c_str(), trackArtist.c_str(),
                trackGainInfo.trackGain, trackGainInfo.trackPeak);
-        StageMetaDataChanges(properties, "REPLAYGAIN_TRACK_GAIN", std::to_string(trackGainInfo.trackGain) + " dB");
-        StageMetaDataChanges(properties, "REPLAYGAIN_TRACK_PEAK", std::to_string(trackGainInfo.trackPeak));
-        CommitMetaDataChanges(path, properties);
+        bitfake::tagging::StageMetaDataChanges(properties, "REPLAYGAIN_TRACK_GAIN", std::to_string(trackGainInfo.trackGain) + " dB");
+        bitfake::tagging::StageMetaDataChanges(properties, "REPLAYGAIN_TRACK_PEAK", std::to_string(trackGainInfo.trackPeak));
+        bitfake::tagging::CommitMetaDataChanges(path, properties);
         return;
     }
 
@@ -1257,17 +1234,15 @@ void ApplyReplayGain(const fs::path &path, ReplayGainByTrack trackGainInfo, Repl
     printf("--- %s - %s\nTrack Gain / Peak: %.2f dB / %.6f\nAlbum Gain / Peak: %.2f dB / %.6f\n\n", trackTitle.c_str(),
            trackArtist.c_str(), trackGainInfo.trackGain, trackGainInfo.trackPeak, albumGainInfo.albumGain,
            albumGainInfo.albumPeak);
-    StageMetaDataChanges(properties, "REPLAYGAIN_TRACK_GAIN", std::to_string(trackGainInfo.trackGain) + " dB");
-    StageMetaDataChanges(properties, "REPLAYGAIN_TRACK_PEAK", std::to_string(trackGainInfo.trackPeak));
-    StageMetaDataChanges(properties, "REPLAYGAIN_ALBUM_GAIN", std::to_string(albumGainInfo.albumGain) + " dB");
-    StageMetaDataChanges(properties, "REPLAYGAIN_ALBUM_PEAK", std::to_string(albumGainInfo.albumPeak));
-    CommitMetaDataChanges(path, properties);
+    bitfake::tagging::StageMetaDataChanges(properties, "REPLAYGAIN_TRACK_GAIN", std::to_string(trackGainInfo.trackGain) + " dB");
+    bitfake::tagging::StageMetaDataChanges(properties, "REPLAYGAIN_TRACK_PEAK", std::to_string(trackGainInfo.trackPeak));
+    bitfake::tagging::StageMetaDataChanges(properties, "REPLAYGAIN_ALBUM_GAIN", std::to_string(albumGainInfo.albumGain) + " dB");
+    bitfake::tagging::StageMetaDataChanges(properties, "REPLAYGAIN_ALBUM_PEAK", std::to_string(albumGainInfo.albumPeak));
+    bitfake::tagging::CommitMetaDataChanges(path, properties);
 }
 
-// Replaygain is calculated from EBU R128 integrated loudness,
-// with a ReplayGain-style -18 dB reference target.
-ReplayGainByTrack CalculateReplayGainTrack(const fs::path &path) {
-    ReplayGainByTrack result{0.0f, 0.0f};
+bitfake::type::ReplayGainByTrack CalculateReplayGainTrack(const fs::path &path) {
+    bitfake::type::ReplayGainByTrack result{0.0f, 0.0f};
 
     TagLib::FileRef f(path.c_str());
     if (f.isNull() || !f.audioProperties()) {
@@ -1383,7 +1358,7 @@ void CalculateReplayGainAlbum(const fs::path &path) {
     const unsigned int hardwareThreads = std::thread::hardware_concurrency();
     const std::size_t desiredWorkers = std::max<std::size_t>(1, static_cast<std::size_t>(hardwareThreads / 2));
     const std::size_t workerCount = std::min<std::size_t>(desiredWorkers, allTracks.size());
-    std::vector<ReplayGainByTrack> trackResults(allTracks.size(), ReplayGainByTrack{0.0f, 0.0f});
+    std::vector<bitfake::type::ReplayGainByTrack> trackResults(allTracks.size(), bitfake::type::ReplayGainByTrack{0.0f, 0.0f});
     std::atomic<std::size_t> nextIndex{0};
     std::vector<std::future<void>> workers;
     workers.reserve(workerCount);
@@ -1404,13 +1379,13 @@ void CalculateReplayGainAlbum(const fs::path &path) {
         worker.get();
     }
 
-    std::unordered_map<std::string, ReplayGainByTrack> trackReplayGainByPath;
+    std::unordered_map<std::string, bitfake::type::ReplayGainByTrack> trackReplayGainByPath;
     trackReplayGainByPath.reserve(allTracks.size());
     for (std::size_t i = 0; i < allTracks.size(); ++i) {
         trackReplayGainByPath[allTracks[i].string()] = trackResults[i];
     }
 
-    std::unordered_map<std::string, ReplayGainByAlbum> albumReplayGain;
+    std::unordered_map<std::string, bitfake::type::ReplayGainByAlbum> albumReplayGain;
 
     for (const auto &[album, paths] : albumMap) {
         double totalGain = 0.0;
@@ -1418,7 +1393,7 @@ void CalculateReplayGainAlbum(const fs::path &path) {
         int trackCount = 0;
 
         for (const auto &trackPath : paths) {
-            ReplayGainByTrack trackGainInfo = trackReplayGainByPath[trackPath.string()];
+            bitfake::type::ReplayGainByTrack trackGainInfo = trackReplayGainByPath[trackPath.string()];
             totalGain += trackGainInfo.trackGain;
             maxPeak = std::max(maxPeak, static_cast<double>(trackGainInfo.trackPeak));
             trackCount++;
@@ -1426,7 +1401,7 @@ void CalculateReplayGainAlbum(const fs::path &path) {
 
         if (trackCount > 0) {
             albumReplayGain[album] =
-                ReplayGainByAlbum{static_cast<float>(totalGain / trackCount), static_cast<float>(maxPeak)};
+                bitfake::type::ReplayGainByAlbum{static_cast<float>(totalGain / trackCount), static_cast<float>(maxPeak)};
 
             const std::string albumName = album.empty() ? "<unknown album>" : album;
             plog(("Album replaygain calculated: " + albumName + " | tracks=" + std::to_string(trackCount) +
@@ -1448,6 +1423,10 @@ void CalculateReplayGainAlbum(const fs::path &path) {
         }
     }
 }
+
+}
+
+namespace bitfake::sort {
 
 static std::string sanitize_dir_name(const std::string &name) {
     std::string safe;
@@ -2269,61 +2248,12 @@ void RenameFilesFromTags(const fs::path &rootDir) {
     }
 }
 
-void MassTagDirectory(const fs::path &dirPath, const std::string &tag, const std::string &value) {
-    // fuck
 
-    if (!fs::exists(dirPath) || !fs::is_directory(dirPath)) {
-        err("Input path does not exist or is not a directory.");
-        return;
-    }
 
-    if (tag.empty()) {
-        err("Tag name cannot be empty.");
-        return;
-    }
-
-    // ignore checking if a value is provided js incase user wants empty val
-    // haii from the guru! :D
-
-    fs::recursive_directory_iterator dirIter(dirPath);
-    std::size_t taggedCount = 0;
-    std::size_t failedCount = 0;
-    for (const auto &entry : dirIter) {
-        if (!entry.is_regular_file() || !fc::IsValidAudioFile(entry.path())) {
-            ++failedCount;
-            continue;
-        }
-
-        TagLib::FileRef f(entry.path().string().c_str());
-        if (f.isNull() || !f.tag() || !f.file()) {
-            ++failedCount;
-            continue;
-        }
-
-        TagLib::PropertyMap properties = f.file()->properties();
-        StageMetaDataChanges(properties, tag, value);
-        if (CommitMetaDataChanges(entry.path(), properties)) {
-            ++taggedCount;
-        } else {
-            ++failedCount;
-        }
-    }
-
-    if (taggedCount > 0) {
-        yay(("Successfully updated tag for " + std::to_string(taggedCount) + " file(s).").c_str());
-        if (failedCount > 0) {
-            warn(("Failed to update tag for " + std::to_string(failedCount) +
-                  " file(s). (Don't Panic! It could just be the album cover!)")
-                     .c_str());
-        }
-        return;
-    } else {
-        err("Failed to update tag for any files in the directory. Are you sure the directory has music? :(");
-        return;
-    }
 }
 
-void GenerateSpectrogram(const fs::path &inputPath, const fs::path &outputImagePath) {
+namespace bitfake::spectral {
+    void GenerateSpectrogram(const fs::path &inputPath, const fs::path &outputImagePath) {
     if (!fs::exists(inputPath) || !fs::is_regular_file(inputPath) || !fc::IsValidAudioFile(inputPath)) {
         err("Input path does not exist or is not a regular file.");
         return;
@@ -2575,5 +2505,4 @@ void GenerateSpectrogram(const fs::path &inputPath, const fs::path &outputImageP
     yay(("Spectrogram image created at: " + outputPath.string()).c_str());
     // dude what the fuck is this spectrogram code i am so sorry for this abomination of a function
 }
-
-} // namespace Operations
+}

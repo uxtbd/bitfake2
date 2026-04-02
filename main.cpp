@@ -10,7 +10,6 @@ namespace fs = std::filesystem;
 #include "Utilities/filechecks.hpp"
 namespace fc = FileChecks;
 #include "Utilities/operations.hpp"
-namespace op = Operations;
 #include "Utilities/globals.hpp"
 namespace gb = globals;
 #include <taglib/fileref.h>
@@ -98,8 +97,8 @@ int main(int argc, char *argv[]) {
                     if (colonPos != std::string::npos) {
                         std::string qualityStr = formatStr.substr(colonPos + 1);
                         formatStr = formatStr.substr(0, colonPos);
-                        gb::outputFormat = op::StringToAudioFormat(formatStr);
-                        if (gb::outputFormat == op::AudioFormat::OPUS) {
+                        gb::outputFormat = bitfake::nonuser::StringToAudioFormat(formatStr);
+                        if (gb::outputFormat == bitfake::type::AudioFormat::OPUS) {
                             try {
                                 int bitrateKbps = std::stoi(qualityStr);
                                 if (bitrateKbps < 0 || bitrateKbps > 512) {
@@ -113,11 +112,11 @@ int main(int argc, char *argv[]) {
                                 return EXIT_FAILURE;
                             }
                         } else {
-                            gb::VBRQuality = op::StringToVBRQuality(qualityStr);
+                            gb::VBRQuality = bitfake::nonuser::StringToVBRQuality(qualityStr);
                         }
                     } else {
-                        gb::outputFormat = op::StringToAudioFormat(formatStr);
-                        if (gb::outputFormat == op::AudioFormat::OPUS) {
+                        gb::outputFormat = bitfake::nonuser::StringToAudioFormat(formatStr);
+                        if (gb::outputFormat == bitfake::type::AudioFormat::OPUS) {
                             gb::opusBitrateKbps = 192;
                         }
                     }
@@ -187,14 +186,6 @@ int main(int argc, char *argv[]) {
     // if (fmt == 1 && (q < 10 || q > 14)) { /* OGG: Q0..Q10 */ }
     // if (fmt == 4 && (q < 15 || q > 23)) { /* FLAC: L0..L8 */ }
 
-    /*
-        Invoking a check here to make sure the specified VBR quality is valid for the specified format. This is
-       important because it will prevent us from passing invalid quality settings to the conversion functions later on,
-       which could cause them to fail or produce unexpected results. By doing this check early on, we can provide
-       immediate feedback to the user and prevent them from going through the entire conversion process only to find out
-       that their quality setting was invalid. It's all about providing a better user experience and preventing
-       frustration.
-    */
 
     if (fmt == 0 && (q < 0 || q > 9)) {
         err("MP3 format requires a VBR quality between V0 and V9 (inclusive)! (Do not use Qx or Lx for MP3! :( )");
@@ -249,7 +240,7 @@ int main(int argc, char *argv[]) {
 
     for (int j = 1; j < argc; j++) {
         if (strcmp(argv[j], "-gmd") == 0 || strcmp(argv[j], "--getmetadata") == 0) {
-            std::vector<op::AudioMetadataResult> results = op::GetMetaDataList(gb::inputFile);
+            std::vector<bitfake::type::AudioMetadataResult> results = bitfake::extract::GetMetaDataList(gb::inputFile);
             if (results.empty()) {
                 err("No metadata found for input path.");
                 return EXIT_FAILURE;
@@ -286,7 +277,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (strcmp(argv[j], "-grg") == 0 || strcmp(argv[j], "--getreplaygain") == 0) {
-            std::vector<op::ReplayGainResult> results = op::GetReplayGainList(gb::inputFile);
+            std::vector<bitfake::type::ReplayGainResult> results = bitfake::extract::GetReplayGainList(gb::inputFile);
             if (results.empty()) {
                 err("No ReplayGain information found for input path.");
                 return EXIT_FAILURE;
@@ -323,7 +314,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (strcmp(argv[j], "-sa") == 0 || strcmp(argv[j], "--spectralanalysis") == 0) {
-            std::vector<op::SpectralAnalysisResult> results = op::SpectralAnalysisList(gb::inputFile);
+            std::vector<bitfake::type::SpectralAnalysisResult> results = bitfake::spectral::SpectralAnalysisList(gb::inputFile);
             if (results.empty()) {
                 err("No spectral analysis results found for input path.");
                 return EXIT_FAILURE;
@@ -388,7 +379,7 @@ int main(int argc, char *argv[]) {
                     }
 
                     try {
-                        op::ConvertToFileType(entry.path(), gb::conversionOutputDirectory, gb::outputFormat,
+                        bitfake::nonuser::ConvertToFileType(entry.path(), gb::conversionOutputDirectory, gb::outputFormat,
                                               gb::VBRQuality);
                     } catch (const std::exception &e) {
                         err((std::string("Failed to convert file: ") + entry.path().string() + " Error: " + e.what())
@@ -398,7 +389,7 @@ int main(int argc, char *argv[]) {
             } else {
                 yay("Trying to convert single file >:P...");
                 try {
-                    op::ConvertToFileType(gb::inputFile, gb::conversionOutputDirectory, gb::outputFormat,
+                    bitfake::nonuser::ConvertToFileType(gb::inputFile, gb::conversionOutputDirectory, gb::outputFormat,
                                           gb::VBRQuality);
                 } catch (const std::exception &e) {
                     err((std::string("Failed to convert file: ") + gb::inputFile.string() + " Error: " + e.what())
@@ -410,7 +401,7 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[j], "-t") == 0 || strcmp(argv[j], "--tag") == 0) {
 
             if (fs::is_directory(gb::inputFile)) {
-                op::MassTagDirectory(gb::inputFile, gb::tag, gb::val);
+                bitfake::tagging::MassTagDirectory(gb::inputFile, gb::tag, gb::val);
                 yay("Done! :D");
                 return EXIT_SUCCESS;
             }
@@ -422,8 +413,8 @@ int main(int argc, char *argv[]) {
             }
 
             tl::PropertyMap existingProps = f.file()->properties();
-            op::StageMetaDataChanges(existingProps, gb::tag, gb::val);
-            op::CommitMetaDataChanges(gb::inputFile, existingProps);
+            bitfake::tagging::StageMetaDataChanges(existingProps, gb::tag, gb::val);
+            bitfake::tagging::CommitMetaDataChanges(gb::inputFile, existingProps);
             yay("Tag applied successfully!");
         }
 
@@ -447,7 +438,7 @@ int main(int argc, char *argv[]) {
                     const std::size_t desiredWorkers =
                         std::max<std::size_t>(1, static_cast<std::size_t>(hardwareThreads / 2));
                     const std::size_t workerCount = std::min<std::size_t>(desiredWorkers, tracks.size());
-                    std::vector<op::ReplayGainByTrack> trackResults(tracks.size(), op::ReplayGainByTrack{0.0f, 0.0f});
+                    std::vector<bitfake::type::ReplayGainByTrack> trackResults(tracks.size(), bitfake::type::ReplayGainByTrack{0.0f, 0.0f});
                     std::atomic<std::size_t> nextIndex{0};
                     std::vector<std::future<void>> workers;
                     workers.reserve(workerCount);
@@ -459,7 +450,7 @@ int main(int argc, char *argv[]) {
                                 if (index >= tracks.size()) {
                                     break;
                                 }
-                                trackResults[index] = op::CalculateReplayGainTrack(tracks[index]);
+                                trackResults[index] = bitfake::replaygain::CalculateReplayGainTrack(tracks[index]);
                             }
                         }));
                     }
@@ -468,24 +459,24 @@ int main(int argc, char *argv[]) {
                         worker.get();
                     }
 
-                    op::ReplayGainByAlbum albumGainInfo; // leave empty since we only want to apply track gain info
+                    bitfake::type::ReplayGainByAlbum albumGainInfo; // leave empty since we only want to apply track gain info
                     for (std::size_t i = 0; i < tracks.size(); ++i) {
-                        op::ApplyReplayGain(tracks[i], trackResults[i], albumGainInfo);
+                        bitfake::replaygain::ApplyReplayGain(tracks[i], trackResults[i], albumGainInfo);
                     }
 
                     yay(("Track ReplayGain applied successfully to " + std::to_string(tracks.size()) + " file(s)!")
                             .c_str());
                 }
             } else {
-                op::ReplayGainByTrack trackGainInfo = op::CalculateReplayGainTrack(gb::inputFile);
-                op::ReplayGainByAlbum albumGainInfo; // leave empty since we only want to apply track gain info
-                op::ApplyReplayGain(gb::inputFile, trackGainInfo, albumGainInfo);
+                bitfake::type::ReplayGainByTrack trackGainInfo = bitfake::replaygain::CalculateReplayGainTrack(gb::inputFile);
+                bitfake::type::ReplayGainByAlbum albumGainInfo; // leave empty since we only want to apply track gain info
+                bitfake::replaygain::ApplyReplayGain(gb::inputFile, trackGainInfo, albumGainInfo);
                 yay("ReplayGain applied successfully!");
             }
         }
 
         if (strcmp(argv[j], "-aag") == 0 || strcmp(argv[j], "--applyalbumgain") == 0) {
-            op::CalculateReplayGainAlbum(gb::inputFile);
+            bitfake::replaygain::CalculateReplayGainAlbum(gb::inputFile);
             yay("Album ReplayGain applied successfully!");
         }
 
@@ -494,7 +485,7 @@ int main(int argc, char *argv[]) {
                 err("Organize into albums requires a directory as input! Use -i <directory>");
                 return EXIT_FAILURE;
             }
-            op::OrganizeIntoAlbums(gb::inputFile, gb::conversionOutputDirectory);
+            bitfake::sort::OrganizeIntoAlbums(gb::inputFile, gb::conversionOutputDirectory);
         }
 
         if (strcmp(argv[j], "-oiaa") == 0 || strcmp(argv[j], "--organizeintoartistalbum") == 0) {
@@ -502,7 +493,7 @@ int main(int argc, char *argv[]) {
                 err("Organize into artist/album requires a directory as input! Use -i <directory>");
                 return EXIT_FAILURE;
             }
-            op::OrganizeIntoArtistAlbum(gb::inputFile, gb::conversionOutputDirectory);
+            bitfake::sort::OrganizeIntoArtistAlbum(gb::inputFile, gb::conversionOutputDirectory);
         }
 
         if (strcmp(argv[j], "-oaia") == 0 || strcmp(argv[j], "--organizealbumsintoartists") == 0) {
@@ -510,21 +501,21 @@ int main(int argc, char *argv[]) {
                 err("Organize albums into artists requires a directory as input! Use -i <directory>");
                 return EXIT_FAILURE;
             }
-            op::OrganizeAlbumsIntoArtists(gb::inputFile);
+            bitfake::sort::OrganizeAlbumsIntoArtists(gb::inputFile);
         }
         if (strcmp(argv[j], "-rfft") == 0 || strcmp(argv[j], "--renamefilesfromtags") == 0) {
             if (!fs::is_directory(gb::inputFile)) {
                 err("Rename files from tags requires a directory as input! Use -i <directory>");
                 return EXIT_FAILURE;
             }
-            op::RenameFilesFromTags(gb::inputFile);
+            bitfake::sort::RenameFilesFromTags(gb::inputFile);
         }
         if (strcmp(argv[j], "-raf") == 0 || strcmp(argv[j], "--renamealbumfolders") == 0) {
             if (!fs::is_directory(gb::inputFile)) {
                 err("Rename album folders requires a directory as input! Use -i <directory>");
                 return EXIT_FAILURE;
             }
-            op::RenameAlbumDirectoriesFromTags(gb::inputFile);
+            bitfake::sort::RenameAlbumDirectoriesFromTags(gb::inputFile);
         }
         if (strcmp(argv[j], "-sg") == 0 || strcmp(argv[j], "--spectrogram") == 0 ||
             strcmp(argv[j], "--generatespectrogram") == 0) {
@@ -539,7 +530,7 @@ int main(int argc, char *argv[]) {
             }
             fs::path outputImagePath =
                 gb::conversionOutputDirectory / (gb::inputFile.stem().string() + "_spectrogram.png");
-            op::GenerateSpectrogram(gb::inputFile, outputImagePath);
+            bitfake::spectral::GenerateSpectrogram(gb::inputFile, outputImagePath);
             std::error_code outputError;
             const bool outputExists = fs::exists(outputImagePath, outputError);
             const bool outputIsRegular = outputExists && fs::is_regular_file(outputImagePath, outputError);
@@ -558,9 +549,9 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
             }
 
-            op::MBRequestData reqData = op::PrepareMBRequestData(gb::inputFile);
+            bitfake::type::MBRequestData reqData = bitfake::musicbrainz::PrepareMBRequestData(gb::inputFile);
 
-            std::string xmlStr = op::GetMBXML(reqData);
+            std::string xmlStr = bitfake::musicbrainz::GetMBXML(reqData);
             if (xmlStr.empty()) {
                 err("MusicBrainz metadata fetch returned no data; metadata was not written.");
                 return EXIT_FAILURE;
@@ -571,13 +562,13 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
             }
 
-            op::MusicBrainzXMLData mbData = op::ParseMBXML(xmlStr);
+            bitfake::type::MusicBrainzXMLData mbData = bitfake::musicbrainz::ParseMBXML(xmlStr);
             if (mbData.MUSICBRAINZ_TRACKID.empty() && mbData.recordingTitle.empty() && mbData.artistName.empty()) {
                 err("MusicBrainz response did not include usable recording metadata; metadata was not written.");
                 return EXIT_FAILURE;
             }
 
-            op::WriteMetaFromMBXML(gb::inputFile, mbData);
+            bitfake::musicbrainz::WriteMetaFromMBXML(gb::inputFile, mbData);
             yay("Metadata fetched from MusicBrainz and written to file successfully!");
         }
     }

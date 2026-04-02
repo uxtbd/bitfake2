@@ -9,7 +9,6 @@ namespace fs = std::filesystem;
 #include "Utilities/filechecks.hpp"
 namespace fc = FileChecks;
 #include "Utilities/operations.hpp"
-namespace op = Operations;
 #include "Utilities/globals.hpp"
 #include <taglib/fileref.h>
 #include <taglib/tag.h>
@@ -26,20 +25,9 @@ namespace op = Operations;
 #include <cctype>
 #include <sndfile.h>
 
-/*
-    helperfunctions.cpp
-    This file will contain the implementation of any helper functions that are used across the project.
-    The idea is to keep the main function clean and delegate any non-core operations to this file.
-    This can include things like metadata extraction, replay gain calculations, MusicBrainz lookups, and more.
-
-    For functions that might request online resources, its best we define them in a different file.
-*/
-
-namespace Operations {
-// Helper Functions
-
-AudioMetadata GetMetaData(const fs::path &path) {
-    AudioMetadata tmpdata;
+namespace bitfake::extract {
+bitfake::type::AudioMetadata GetMetaData(const fs::path &path) {
+    bitfake::type::AudioMetadata tmpdata;
     if (!fs::exists(path) || !fs::is_regular_file(path)) {
         warn("Metadata read failed: file does not exist or is not a regular file.");
         return tmpdata;
@@ -103,8 +91,8 @@ AudioMetadata GetMetaData(const fs::path &path) {
     return tmpdata;
 } // GetMetaData
 
-std::vector<AudioMetadataResult> GetMetaDataList(const fs::path &path) {
-    std::vector<AudioMetadataResult> results;
+std::vector<bitfake::type::AudioMetadataResult> GetMetaDataList(const fs::path &path) {
+    std::vector<bitfake::type::AudioMetadataResult> results;
 
     if (!fs::exists(path)) {
         warn("Metadata list failed: input path does not exist");
@@ -121,7 +109,7 @@ std::vector<AudioMetadataResult> GetMetaDataList(const fs::path &path) {
         if (results.empty()) {
             warn("Metadata list: no valid audio files found in directory.");
         } else {
-            std::sort(results.begin(), results.end(), [](const AudioMetadataResult &a, const AudioMetadataResult &b) {
+            std::sort(results.begin(), results.end(), [](const bitfake::type::AudioMetadataResult &a, const bitfake::type::AudioMetadataResult &b) {
                 return a.metadata.trackNumber < b.metadata.trackNumber;
             });
         }
@@ -137,10 +125,10 @@ std::vector<AudioMetadataResult> GetMetaDataList(const fs::path &path) {
     return results;
 } // GetMetaDataList
 
-ReplayGainInfo GetReplayGain(const fs::path &path) {
+bitfake::type::ReplayGainInfo GetReplayGain(const fs::path &path) {
     // No calculations here; read ReplayGain tags directly with TagLib.
 
-    ReplayGainInfo result;
+    bitfake::type::ReplayGainInfo result;
 
     if (!fs::exists(path) || !fs::is_regular_file(path)) {
         warn("ReplayGain read failed: file does not exist or is not a regular file.");
@@ -190,8 +178,8 @@ ReplayGainInfo GetReplayGain(const fs::path &path) {
 
 } // GetReplayGain
 
-std::vector<ReplayGainResult> GetReplayGainList(const fs::path &path) {
-    std::vector<ReplayGainResult> results;
+std::vector<bitfake::type::ReplayGainResult> GetReplayGainList(const fs::path &path) {
+    std::vector<bitfake::type::ReplayGainResult> results;
 
     if (!fs::exists(path)) {
         warn("ReplayGain list failed: input path does not exist.");
@@ -208,7 +196,7 @@ std::vector<ReplayGainResult> GetReplayGainList(const fs::path &path) {
         if (results.empty()) {
             warn("ReplayGain list: no valid audio files found in directory.");
         } else {
-            std::sort(results.begin(), results.end(), [](const ReplayGainResult &a, const ReplayGainResult &b) {
+            std::sort(results.begin(), results.end(), [](const bitfake::type::ReplayGainResult &a, const bitfake::type::ReplayGainResult &b) {
                 return a.info.trackNumber < b.info.trackNumber;
             });
         }
@@ -223,9 +211,12 @@ std::vector<ReplayGainResult> GetReplayGainList(const fs::path &path) {
     results.push_back({path, GetReplayGain(path)});
     return results;
 } // GetReplayGainList
+ 
+}
 
-SpectralAnalysisResult SpectralAnalysis(const fs::path &path) {
-    SpectralAnalysisResult tmpresult;
+namespace bitfake::spectral {
+bitfake::type::SpectralAnalysisResult SpectralAnalysis(const fs::path &path) {
+    bitfake::type::SpectralAnalysisResult tmpresult;
     std::vector<float> samples;
     constexpr int BUFFER_SIZE = 4096;
     constexpr int FFT_SIZE = 4096;
@@ -474,8 +465,8 @@ SpectralAnalysisResult SpectralAnalysis(const fs::path &path) {
     return tmpresult;
 } // SpectralAnalysis
 
-std::vector<SpectralAnalysisResult> SpectralAnalysisList(const fs::path &path) {
-    std::vector<SpectralAnalysisResult> results;
+std::vector<bitfake::type::SpectralAnalysisResult> SpectralAnalysisList(const fs::path &path) {
+    std::vector<bitfake::type::SpectralAnalysisResult> results;
 
     if (!fs::exists(path)) {
         warn("Spectral analysis list failed: input path does not exist.");
@@ -493,7 +484,7 @@ std::vector<SpectralAnalysisResult> SpectralAnalysisList(const fs::path &path) {
             warn("Spectral analysis list: no valid audio files found in directory.");
         } else {
             std::sort(results.begin(), results.end(),
-                      [](const SpectralAnalysisResult &a, const SpectralAnalysisResult &b) {
+                      [](const bitfake::type::SpectralAnalysisResult &a, const bitfake::type::SpectralAnalysisResult &b) {
                           return a.title < b.title; // Sort by title for simplicity
                       });
         }
@@ -508,13 +499,15 @@ std::vector<SpectralAnalysisResult> SpectralAnalysisList(const fs::path &path) {
     results.push_back(SpectralAnalysis(path));
     return results;
 } // SpectralAnalysisList
+}
 
-bool InputHasAttachedCover(const fs::path &inputPath) {
-    AttachedCoverArt coverArt;
+namespace bitfake::coverart {
+    bool InputHasAttachedCover(const fs::path &inputPath) {
+    bitfake::type::AttachedCoverArt coverArt;
     return GetAttachedCover(inputPath, coverArt);
 }
 
-bool GetAttachedCover(const fs::path &inputPath, AttachedCoverArt &coverArt) {
+bool GetAttachedCover(const fs::path &inputPath, bitfake::type::AttachedCoverArt &coverArt) {
     if (!fs::exists(inputPath) || !fs::is_regular_file(inputPath)) {
         return false;
     }
@@ -666,7 +659,7 @@ bool GetAttachedCover(const fs::path &inputPath, AttachedCoverArt &coverArt) {
     return false;
 }
 
-bool WriteAttachedCover(const fs::path &outputPath, AudioFormat outputFormat, const AttachedCoverArt &coverArt) {
+bool WriteAttachedCover(const fs::path &outputPath, bitfake::type::AudioFormat outputFormat, const bitfake::type::AttachedCoverArt &coverArt) {
     if (coverArt.imageData.empty()) {
         return false;
     }
@@ -674,7 +667,7 @@ bool WriteAttachedCover(const fs::path &outputPath, AudioFormat outputFormat, co
     TagLib::ByteVector imageData(reinterpret_cast<const char *>(coverArt.imageData.data()),
                                  static_cast<unsigned int>(coverArt.imageData.size()));
 
-    if (outputFormat == AudioFormat::MP3) {
+    if (outputFormat == bitfake::type::AudioFormat::MP3) {
         TagLib::MPEG::File file(outputPath.string().c_str());
         TagLib::ID3v2::Tag *tag = file.ID3v2Tag(true);
         if (!tag) {
@@ -695,7 +688,7 @@ bool WriteAttachedCover(const fs::path &outputPath, AudioFormat outputFormat, co
         return file.save();
     }
 
-    if (outputFormat == AudioFormat::FLAC) {
+    if (outputFormat == bitfake::type::AudioFormat::FLAC) {
         TagLib::FLAC::File file(outputPath.string().c_str());
         file.removePictures();
 
@@ -708,7 +701,7 @@ bool WriteAttachedCover(const fs::path &outputPath, AudioFormat outputFormat, co
         return file.save();
     }
 
-    if (outputFormat == AudioFormat::OPUS) {
+    if (outputFormat == bitfake::type::AudioFormat::OPUS) {
         TagLib::Ogg::Opus::File file(outputPath.string().c_str());
         TagLib::Ogg::XiphComment *tag = file.tag();
         if (!tag) {
@@ -729,12 +722,12 @@ bool WriteAttachedCover(const fs::path &outputPath, AudioFormat outputFormat, co
     return false;
 }
 
-bool CopyAttachedCover(const fs::path &inputPath, const fs::path &outputPath, AudioFormat outputFormat) {
+bool CopyAttachedCover(const fs::path &inputPath, const fs::path &outputPath, bitfake::type::AudioFormat outputFormat) {
     if (!FormatSupportsAttachedCover(outputFormat)) {
         return false;
     }
 
-    AttachedCoverArt coverArt;
+    bitfake::type::AttachedCoverArt coverArt;
     if (!GetAttachedCover(inputPath, coverArt)) {
         return false;
     }
@@ -742,26 +735,29 @@ bool CopyAttachedCover(const fs::path &inputPath, const fs::path &outputPath, Au
     return WriteAttachedCover(outputPath, outputFormat, coverArt);
 }
 
-bool FormatSupportsAttachedCover(AudioFormat format) {
-    return format == AudioFormat::MP3 || format == AudioFormat::FLAC || format == AudioFormat::OPUS;
+bool FormatSupportsAttachedCover(bitfake::type::AudioFormat format) {
+    return format == bitfake::type::AudioFormat::MP3 || format == bitfake::type::AudioFormat::FLAC || format == bitfake::type::AudioFormat::OPUS;
 }
 
-std::string OutputExtensionForFormat(AudioFormat format) {
+std::string OutputExtensionForFormat(bitfake::type::AudioFormat format) {
     switch (format) {
-    case AudioFormat::MP3:
+    case bitfake::type::AudioFormat::MP3:
         return ".mp3";
-    case AudioFormat::OGG:
+    case bitfake::type::AudioFormat::OGG:
         return ".ogg";
-    case AudioFormat::FLAC:
+    case bitfake::type::AudioFormat::FLAC:
         return ".flac";
-    case AudioFormat::WAV:
+    case bitfake::type::AudioFormat::WAV:
         return ".wav";
-    case AudioFormat::OPUS:
+    case bitfake::type::AudioFormat::OPUS:
         return ".opus";
-    case AudioFormat::AAC:
+    case bitfake::type::AudioFormat::AAC:
         return ".aac";
     default:
         return ".audio";
     }
 }
-} // namespace Operations
+
+}
+
+

@@ -5,7 +5,6 @@ namespace fs = std::filesystem;
 #include "Utilities/filechecks.hpp"
 namespace fc = FileChecks;
 #include "Utilities/operations.hpp"
-namespace op = Operations;
 #include "Utilities/globals.hpp"
 namespace gb = globals;
 #include <curl/curl.h>
@@ -16,7 +15,7 @@ namespace gb = globals;
 #include <cctype>
 #include <algorithm>
 
-namespace Operations {
+namespace bitfake::musicbrainz {
 
 // Helper functions to help extract metadata from a JSON/XML
 // which is expected from libcurl when we request metadata from musicbrainz
@@ -85,8 +84,8 @@ namespace Operations {
 END OF EXAMPLE XML
 */
 
-op::MBRequestData PrepareMBRequestData(const fs::path &inputPath) {
-    op::MBRequestData requestData;
+bitfake::type::MBRequestData PrepareMBRequestData(const fs::path &inputPath) {
+    bitfake::type::MBRequestData requestData;
 
     // TagLib::FileRef f(inputPath.string().c_str());
     // if (f.isNull() || f.tag() == nullptr) {
@@ -100,7 +99,7 @@ op::MBRequestData PrepareMBRequestData(const fs::path &inputPath) {
     // requestData.album = tag->album().to8Bit(true);
     // requestData.trackNumber = tag->track();
 
-    op::AudioMetadata tmpMD = op::GetMetaData(inputPath);
+    bitfake::type::AudioMetadata tmpMD = bitfake::extract::GetMetaData(inputPath);
     requestData.artist = tmpMD.artist;
     requestData.title = tmpMD.title;
     requestData.album = tmpMD.album;
@@ -122,7 +121,7 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
     return totalSize;
 }
 
-std::string GetMBXML(const op::MBRequestData &reqData) {
+std::string GetMBXML(const bitfake::type::MBRequestData &reqData) {
     // actually lib curl stuff!
     std::string XMLresponseStr; // returning this
 
@@ -249,8 +248,8 @@ std::string GetMBXML(const op::MBRequestData &reqData) {
     return XMLresponseStr;
 }
 
-op::MusicBrainzXMLData ParseMBXML(const std::string &xmlStr) {
-    op::MusicBrainzXMLData data;
+bitfake::type::MusicBrainzXMLData ParseMBXML(const std::string &xmlStr) {
+    bitfake::type::MusicBrainzXMLData data;
     data.trackNumber = 0;
 
     auto sanitizeText = [](std::string value) -> std::string {
@@ -458,7 +457,7 @@ op::MusicBrainzXMLData ParseMBXML(const std::string &xmlStr) {
     return data;
 }
 
-void WriteMetaFromMBXML(const fs::path &inputPath, const MusicBrainzXMLData &mbData) {
+void WriteMetaFromMBXML(const fs::path &inputPath, const bitfake::type::MusicBrainzXMLData &mbData) {
     TagLib::FileRef fileRef(inputPath.string().c_str());
     if (fileRef.isNull() || fileRef.tag() == nullptr) {
         err("Failed to write MusicBrainz metadata: unsupported format or unreadable tags.");
@@ -469,20 +468,20 @@ void WriteMetaFromMBXML(const fs::path &inputPath, const MusicBrainzXMLData &mbD
 
     // Basic Metadata
     if (!mbData.recordingTitle.empty()) {
-        op::StageMetaDataChanges(drawer, "Title", mbData.recordingTitle);
+        bitfake::tagging::StageMetaDataChanges(drawer, "Title", mbData.recordingTitle);
     }
     if (!mbData.artistName.empty()) {
-        op::StageMetaDataChanges(drawer, "Artist", mbData.artistName);
-        op::StageMetaDataChanges(drawer, "Album Artist", mbData.artistName);
+        bitfake::tagging::StageMetaDataChanges(drawer, "Artist", mbData.artistName);
+        bitfake::tagging::StageMetaDataChanges(drawer, "Album Artist", mbData.artistName);
     }
     if (!mbData.releaseTitle.empty()) {
-        op::StageMetaDataChanges(drawer, "Album", mbData.releaseTitle);
+        bitfake::tagging::StageMetaDataChanges(drawer, "Album", mbData.releaseTitle);
     }
     if (!mbData.releaseDate.empty()) {
-        op::StageMetaDataChanges(drawer, "Date", mbData.releaseDate);
+        bitfake::tagging::StageMetaDataChanges(drawer, "Date", mbData.releaseDate);
     }
     if (mbData.trackNumber > 0) {
-        op::StageMetaDataChanges(drawer, "TrackNumber", std::to_string(mbData.trackNumber));
+        bitfake::tagging::StageMetaDataChanges(drawer, "TrackNumber", std::to_string(mbData.trackNumber));
     }
 
     std::string genreStr;
@@ -495,23 +494,23 @@ void WriteMetaFromMBXML(const fs::path &inputPath, const MusicBrainzXMLData &mbD
         }
     }
     if (!genreStr.empty()) {
-        op::StageMetaDataChanges(drawer, "Genre", genreStr);
+        bitfake::tagging::StageMetaDataChanges(drawer, "Genre", genreStr);
     }
 
     // musicbrainz ids
     if (!mbData.MUSICBRAINZ_ALBUMID.empty()) {
-        op::StageMetaDataChanges(drawer, "MUSICBRAINZ_ALBUMID", mbData.MUSICBRAINZ_ALBUMID);
+        bitfake::tagging::StageMetaDataChanges(drawer, "MUSICBRAINZ_ALBUMID", mbData.MUSICBRAINZ_ALBUMID);
     }
     if (!mbData.MUSICBRAINZ_ARTISTID.empty()) {
-        op::StageMetaDataChanges(drawer, "MUSICBRAINZ_ARTISTID", mbData.MUSICBRAINZ_ARTISTID);
+        bitfake::tagging::StageMetaDataChanges(drawer, "MUSICBRAINZ_ARTISTID", mbData.MUSICBRAINZ_ARTISTID);
     }
     if (!mbData.MUSICBRAINZ_TRACKID.empty()) {
-        op::StageMetaDataChanges(drawer, "MUSICBRAINZ_TRACKID", mbData.MUSICBRAINZ_TRACKID);
+        bitfake::tagging::StageMetaDataChanges(drawer, "MUSICBRAINZ_TRACKID", mbData.MUSICBRAINZ_TRACKID);
     }
 
-    op::CommitMetaDataChanges(inputPath, drawer);
+    bitfake::tagging::CommitMetaDataChanges(inputPath, drawer);
 
     return;
 }
 
-} // namespace Operations
+} // namespace bitfake::musicbrainz
