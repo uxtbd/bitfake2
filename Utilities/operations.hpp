@@ -20,6 +20,7 @@ enum class AudioFormat {
     M4A,
     WAV,
     FLAC,
+    ALAC,
     AAC,
     WMA,
     OPUS,

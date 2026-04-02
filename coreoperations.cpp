@@ -1175,9 +1175,12 @@ bool ConvertToFileType(const fs::path &inputPath, const fs::path &outputPath, bi
             return false;
         }
 
+
+        // check if source file is at all lossless (wavpack is a bit weird and can do lossy too, but we'll allow it as a source since it's often used for lossless)
         if (!fc::IsSpecificAudioFormat(sourcePath, bitfake::type::AudioFormat::FLAC) &&
-            !fc::IsSpecificAudioFormat(sourcePath, bitfake::type::AudioFormat::WAV)) {
-            warn("Input file is not a lossless file. Conversion may result in quality loss. :(");
+            !fc::IsSpecificAudioFormat(sourcePath, bitfake::type::AudioFormat::WAV) &&
+            !fc::IsSpecificAudioFormat(sourcePath, bitfake::type::AudioFormat::ALAC)) {
+            warn("Input file is not a lossless file. Conversion may result in heavy quality loss. :(");
         }
 
         fs::path outputFile = requestedOutputPath;
@@ -1215,6 +1218,9 @@ bool ConvertToFileType(const fs::path &inputPath, const fs::path &outputPath, bi
                 break;
             case bitfake::type::AudioFormat::OGG:
                 outputFormat = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
+                break;
+            case bitfake::type::AudioFormat::ALAC:
+                outputFormat = SF_FORMAT_ALAC_16 | SF_FORMAT_ALAC_20 | SF_FORMAT_ALAC_24 | SF_FORMAT_ALAC_32;
                 break;
             default:
                 err("Unsupported libsndfile output format.");
