@@ -8,7 +8,7 @@ PREFIX    ?= /usr/local
 
 MINGW_BIN := /mingw64/bin
 UNAME_S := $(shell uname -s)
-SRC := main.cpp helperfunctions.cpp filechecks.cpp globals.cpp nonusrfunctions.cpp coreoperations.cpp onlineoperations.cpp
+SRC := main.cpp helperfunctions.cpp filechecks.cpp globals.cpp nonusrfunctions.cpp coreoperations.cpp onlineoperations.cpp Utilities/pugixml.cpp
 OBJ := $(addprefix $(BUILD_DIR)/,$(SRC:.cpp=.o))
 
 ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
@@ -32,6 +32,7 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
+	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 PREFIX ?= /usr/local

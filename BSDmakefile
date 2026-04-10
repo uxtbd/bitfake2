@@ -37,7 +37,7 @@ DESTDIR  ?=
 PREFIX   ?= $(LOCALBASE)
 BINDIR   = $(DESTDIR)$(PREFIX)/bin
 
-SRC= main.cpp helperfunctions.cpp filechecks.cpp globals.cpp nonusrfunctions.cpp coreoperations.cpp onlineoperations.cpp
+SRC= main.cpp helperfunctions.cpp filechecks.cpp globals.cpp nonusrfunctions.cpp coreoperations.cpp onlineoperations.cpp Utilities/pugixml.cpp
 
 .for _src in $(SRC)
 OBJ+= $(BUILD_DIR)/$(_src:S/.cpp/.o/)
@@ -55,6 +55,7 @@ $(BUILD_DIR):
 
 .for _src in $(SRC)
 $(BUILD_DIR)/$(_src:S/.cpp/.o/): $(_src) $(BUILD_DIR)
+	mkdir -p ${.TARGET:H}
 	$(CXX) $(CXXFLAGS) -c $(_src) -o $(.TARGET)
 .endfor
 
