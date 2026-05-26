@@ -31,6 +31,7 @@ namespace bitfake::online {
 // Helper functions to help extract metadata from a JSON/XML
 // which is expected from libcurl when we request metadata from musicbrainz
 // i do not plan on adding any other database because MB is public, and FOSS.
+// i fucking LIED!! discogs sounds sm better accouring to a few soulseek souls. we must add it soon.
 
 // example XML:
 /*

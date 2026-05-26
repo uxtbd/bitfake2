@@ -113,6 +113,10 @@ bool IsSpecificAudioFormat(const fs::path &path, bitfake::type::AudioFormat form
         return (memcmp(buffer, "fLaC", 4) == 0);
     case bitfake::type::AudioFormat::OGG:
         return (memcmp(buffer, "OggS", 4) == 0);
+    case bitfake::type::AudioFormat::M4A:
+    case bitfake::type::AudioFormat::ALAC:
+        // M4A/ALAC files are MP4 containers with "ftyp" atom at offset 4
+        return (memcmp(buffer + 4, "ftyp", 4) == 0);
     // Add more cases for other formats as needed
     default:
         warn("Unsupported audio format specified for checking.");

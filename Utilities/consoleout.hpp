@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <mutex>
 
+// Forward declare global quiet mode flag
+namespace globals {extern bool quietMode;}
+
 namespace ConsoleOut {
 static constexpr const char *RED = "\033[31m";
 static constexpr const char *GREEN = "\033[32m";
@@ -27,6 +30,7 @@ inline void err(const char *msg = "") {
     }
 }
 inline void warn(const char *msg) {
+    if (::globals::quietMode) return;  // Suppress warnings in quiet mode
     std::lock_guard<std::mutex> lock(ConsoleMutex);
     if (msg[0] != '\0') {
         printf("%s[WRN]\t%s%s\n", YELLOW, RESET, msg);

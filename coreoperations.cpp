@@ -1,4 +1,6 @@
 #include <cstdio>
+#include <cstdarg>
+#include <cstring>
 #include "Utilities/consoleout.hpp"
 #include "Utilities/pathutils.hpp"
 using namespace ConsoleOut;
@@ -45,6 +47,22 @@ extern "C" {
 }
 
 namespace {
+// Suppress FFmpeg's verbose logging (filters out expected MP3 timestamp warnings, etc.)
+static void SuppressFFmpegLogging(void *ptr, int level, const char *fmt, va_list vl) {
+    (void)ptr;
+    if (level <= AV_LOG_ERROR) {
+        // Check if it's an expected MP3 timestamp warning - if so, skip it
+        if (fmt && (strstr(fmt, "Could not update timestamps") != nullptr)) {
+            return;
+        }
+        char buffer[1024];
+        vsnprintf(buffer, sizeof(buffer), fmt, vl);
+        if (buffer[0] != '\0') {
+            // ffmpeg errors are printed to stderr by default, so we just ignore them
+        }
+    }
+}
+
 std::string AvErrorToString(int errorCode) {
     char errorBuffer[AV_ERROR_MAX_STRING_SIZE] = {0};
     av_strerror(errorCode, errorBuffer, sizeof(errorBuffer));
@@ -612,6 +630,10 @@ int QualityToBitrateKbps(bitfake::type::AudioFormat format, bitfake::type::VBRQu
 
 bool ConvertWithLibAv(const fs::path &inputPath, const fs::path &outputFile, bitfake::type::AudioFormat format,
                       bitfake::type::VBRQualities quality, int opusBitrateKbps) {
+    // Suppress FFmpeg's verbose logging for timestamps and other non-critical warnings
+    av_log_set_callback(SuppressFFmpegLogging);
+    av_log_set_level(AV_LOG_FATAL);  // Only show fatal errors
+    
     AVFormatContext *inputFormat = nullptr;
     AVFormatContext *outputFormat = nullptr;
     AVCodecContext *decoderContext = nullptr;
@@ -1294,6 +1316,7 @@ bool ConvertToFileType(const fs::path &inputPath, const fs::path &outputPath, bi
         } else {
             if (!ConvertWithLibAv(sourcePath, outputFile, format, quality, gb::opusBitrateKbps)) {
                 err("Library-based conversion failed for requested output format.");
+                err(("File: " + sourcePath.string()).c_str());
                 removePartialOutput(outputFile);
                 return false;
             }

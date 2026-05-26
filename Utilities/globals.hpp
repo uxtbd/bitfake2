@@ -22,5 +22,6 @@ extern bool Parallel;
 extern std::size_t threads;
 extern bool recursive;
 extern bool musicbrainzConfirm;
+extern bool quietMode;
 } // namespace globals
 #endif

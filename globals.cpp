@@ -14,4 +14,5 @@ bool Parallel = true;
 std::size_t threads = 0;
 bool recursive = false;
 bool musicbrainzConfirm = true;
+bool quietMode = false;
 } // namespace globals

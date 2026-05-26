@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
                     "  -mb,   --musicbrainz                     Fetch metadata from MusicBrainz and write to file\n");
                 printf("  -mbnc, --musicbrainz-no-confirm          Bypass confirmation and write MusicBrainz metadata immediately\n");
                 printf("  -lrc,  --lrclib                          Fetch lyrics from LRCLib and write a .lrc file next to input\n");
+                printf("  -q,    --quiet                           Suppress non-critical warnings\n");
                 printf("  -v,    --version                         Show program version\n");
                 return EXIT_SUCCESS;
             }
@@ -235,6 +236,10 @@ int main(int argc, char *argv[]) {
                        "the authors be "
                        "held liable for any damages arising from the use of this software.\n");
                 return EXIT_SUCCESS;
+            }
+
+            if (strcmp(argv[i], "-q") == 0 || strcmp(argv[i], "--quiet") == 0) {
+                gb::quietMode = true;
             }
 
             if (strcmp(argv[i], "--parallel") == 0 || strcmp(argv[i], "-p") == 0) {
