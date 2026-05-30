@@ -23,3 +23,5 @@ bitf
 
 *.dll
 *.exe
+
+.envrc #ignored till future notice by nix professinals
