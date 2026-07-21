@@ -1,5 +1,5 @@
-let
-  sources = import ./npins;
-  pkgs = import sources.nixpkgs { };
-in
+{
+  pkgs ? import <nixpkgs> { },
+}:
+
 pkgs.callPackage ./package.nix { }

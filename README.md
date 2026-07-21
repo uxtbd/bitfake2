@@ -73,8 +73,6 @@ Fedora/Fedora-based distributions:
 ```sh
 sudo dnf install -y gcc-c++ make pkgconf-pkg-config taglib-devel fftw-devel libebur128-devel libsndfile-devel ffmpeg-free-devel libcurl-devel
 ```
-fixed
-
 RHEL:
 ```sh
 sudo dnf install -y epel-release dnf-plugins-core && sudo dnf install -y https://download1.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm && sudo dnf config-manager --set-enabled crb && sudo dnf install -y gcc-c++ make taglib-devel fftw-devel ebur128-devel libsndfile-devel ffmpeg-devel libcurl-devel
@@ -112,22 +110,6 @@ pacman -Syu --needed base-devel mingw-w64-x86_64-taglib mingw-w64-x86_64-fftw mi
 
 ```
 NixOS:
-Users that are using npins:
-```sh
-npins add github Ray17x bitfake2 --branch main
-```
-Then add to your system packages:
-```nix
-let
-  sources = import ../npins/default.nix;
-in {
-  environment.systemPackages = [
-    (pkgs.callPackage "${sources.bitfake2}/package.nix" {})
-  ];
-}
-```
-> [!NOTE]
-> This might differ to other people's npins configuration but mostly should be the same.
 
 Users that are using flakes, add this to your flake.nix:
 ```nix
@@ -344,3 +326,5 @@ want to contribute? contact me, or make yourself seen by making a few pull reque
 <a href="https://github.com/Ray17x/bitfake2/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=Ray17x/bitfake2" />
 </a>
+
+

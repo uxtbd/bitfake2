@@ -24,4 +24,7 @@ bitf
 *.dll
 *.exe
 
-.envrc #ignored till future notice by nix professinals
+# Nix
+.direnv/
+result-*
+result

@@ -10,11 +10,11 @@ jobs:
   build-freebsd:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build in FreeBSD
         uses: vmactions/freebsd-vm@v1
         with:
-          release: "14.4"
+          release: "15.0"
           usesh: true
           prepare: |
             pkg install -y taglib fftw3 libebur128 libsndfile ffmpeg curl

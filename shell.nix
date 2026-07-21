@@ -1,12 +1,10 @@
-let
-  sources = import ./npins;
-  pkgs = import sources.nixpkgs { };
-in
-pkgs.mkShell {
-  inputsFrom = [ (pkgs.callPackage ./package.nix { }) ];
+{
+  pkgs ? import <nixpkgs> { },
+}:
 
-  nativeBuildInputs = with pkgs; [
-    clang-tools
-    npins
+pkgs.mkShell {
+  inputsFrom = [
+    (pkgs.callPackage ./package.nix { })
   ];
 }
+
